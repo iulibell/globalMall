@@ -1,0 +1,3 @@
+com\admin\dto\PortalGoodsDto.class
+com\admin\schedule\GoodsApplicationPayTimeoutSchedule.class
+com\admin\schedule\RegisterReviewedSchedule.class

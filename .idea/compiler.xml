@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CompilerConfiguration">
+    <annotationProcessing>
+      <profile name="Maven default annotation processors profile" enabled="true">
+        <sourceOutputDir name="target/generated-sources/annotations" />
+        <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
+        <outputRelativeToContentRoot value="true" />
+        <module name="gl-message" />
+        <module name="mall-admin" />
+        <module name="gl-auth" />
+        <module name="gl-gateway" />
+        <module name="gl-search" />
+        <module name="gl-system" />
+        <module name="gl-common" />
+        <module name="mall-portal" />
+      </profile>
+    </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="gl-admin" target="17" />
+      <module name="gl-order" target="17" />
+      <module name="gl-stock" target="17" />
+      <module name="gl-tms" target="17" />
+      <module name="gl-wms" target="17" />
+    </bytecodeTargetLevel>
+  </component>
+  <component name="JavacSettings">
+    <option name="ADDITIONAL_OPTIONS_OVERRIDE">
+      <module name="GlobalLogi" options="-parameters" />
+      <module name="gl-admin" options="" />
+      <module name="gl-auth" options="-parameters" />
+      <module name="gl-common" options="-parameters" />
+      <module name="gl-gateway" options="-parameters" />
+      <module name="gl-message" options="-parameters" />
+      <module name="gl-order" options="" />
+      <module name="gl-search" options="-parameters" />
+      <module name="gl-stock" options="" />
+      <module name="gl-system" options="-parameters" />
+      <module name="gl-tms" options="" />
+      <module name="gl-wms" options="" />
+      <module name="globalLogi" options="" />
+      <module name="mall-admin" options="-parameters" />
+      <module name="mall-portal" options="-parameters" />
+    </option>
+  </component>
+</project>

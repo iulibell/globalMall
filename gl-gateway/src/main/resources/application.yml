@@ -1,0 +1,74 @@
+spring:
+  application:
+    name: gl-gateway
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/global_mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+    gateway:
+      server:
+        webflux:
+          routes:
+            - id: gl-system
+              uri: ${SERVICE_URI_GL_SYSTEM:lb://gl-system}
+              predicates:
+                - Path=/system/**
+            - id: gl-auth
+              uri: ${SERVICE_URI_GL_AUTH:lb://gl-auth}
+              predicates:
+                - Path=/auth/**
+            - id: mall-admin
+              uri: ${SERVICE_URI_MALL_ADMIN:lb://mall-admin}
+              predicates:
+                - Path=/admin/**
+            - id: mall-portal
+              uri: ${SERVICE_URI_MALL_PORTAL:lb://mall-portal}
+              predicates:
+                - Path=/portal/**
+            - id: logi-oms
+              uri: ${SERVICE_URI_LOGI_OMS:lb://logi-oms}
+              predicates:
+                - Path=/oms/**
+            - id: logi-wms
+              uri: ${SERVICE_URI_LOGI_WMS:lb://logi-wms}
+              predicates:
+                - Path=/wms/**
+
+server:
+  port: ${GATEWAY_PORT:8502}
+
+sa-token:
+  token-name: satoken
+  jwt-secret-key: globalMall-shared-jwt-secret-for-dev-DO-NOT-USE-in-prod-32b
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: false
+  token-style: uuid
+  token-prefix: Bearer
+  is-log: true
+
+secure:
+  ignore:
+    urls:
+      - "/system/login"
+      - "/system/register"
+      - "/system/register/sendCaptcha"
+      - "/auth/login"
+      - "/auth/register"
+      - "/auth/register/sendCaptcha"
+
+security:
+  internal:
+    enabled: false
+    token-value: ${SECURITY_INTERNAL_TOKEN:}

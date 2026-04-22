@@ -1,0 +1,67 @@
+package com.admin.service.impl;
+
+import com.admin.dto.PortalGoodsDto;
+import com.admin.dto.PortalBrandDto;
+import com.admin.dto.PortalGoodsTypeDto;
+import com.admin.service.ManagerService;
+import com.admin.service.client.PortalServiceClient;
+import jakarta.annotation.Resource;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class ManagerServiceImpl implements ManagerService {
+    @Resource
+    private PortalServiceClient portalServiceClient;
+
+    @Override
+    public List<PortalGoodsDto> getPortalGoods(int pageNum, int pageSize, short category) {
+        return portalServiceClient.getRegularPortalGoods(pageNum,pageSize,category);
+    }
+
+    @Override
+    public PortalGoodsDto getPortalGoodsById(String goodsId) {
+        return  portalServiceClient.getPortalGoodsById(goodsId);
+    }
+
+    @Override
+    public List<PortalGoodsTypeDto> getGoodsType(int pageNum, int pageSize) {
+        return portalServiceClient.getGoodsType(pageNum, pageSize);
+    }
+
+    @Override
+    public void addGoodsType(PortalGoodsTypeDto portalGoodsTypeDto) {
+        portalServiceClient.addGoodsType(portalGoodsTypeDto);
+    }
+
+    @Override
+    public void updateGoodsType(PortalGoodsTypeDto portalGoodsTypeDto) {
+        portalServiceClient.updateGoodsType(portalGoodsTypeDto);
+    }
+
+    @Override
+    public void deleteGoodsType(Long typeId) {
+        portalServiceClient.deleteGoodsType(typeId);
+    }
+
+    @Override
+    public List<PortalBrandDto> getBrand(int pageNum, int pageSize) {
+        return portalServiceClient.getBrand(pageNum, pageSize);
+    }
+
+    @Override
+    public void addBrand(PortalBrandDto portalBrandDto) {
+        portalServiceClient.addBrand(portalBrandDto);
+    }
+
+    @Override
+    public void updateBrand(PortalBrandDto portalBrandDto) {
+        portalServiceClient.updateBrand(portalBrandDto);
+    }
+
+    @Override
+    public void deleteBrand(Long id) {
+        portalServiceClient.deleteBrand(id);
+    }
+}

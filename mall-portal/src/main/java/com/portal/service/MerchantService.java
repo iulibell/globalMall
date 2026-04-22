@@ -1,0 +1,55 @@
+package com.portal.service;
+
+import com.common.api.CommonResult;
+import com.portal.dto.PortalOffShelfPayDto;
+import com.portal.dto.PortalGoodsApplicationDto;
+import com.portal.dto.PortalGoodsDto;
+
+import java.util.List;
+
+public interface MerchantService {
+    /**
+     * 商家申请上架商品(merchant操作)
+     * @param portalGoodsApplicationDto 商品上架申请dto
+     */
+    void applyGoods(PortalGoodsApplicationDto portalGoodsApplicationDto);
+
+    /**
+     * 申请商品下架，需支付运费与下架处理费用(merchant操作)
+     * @param goodsId 商品id
+     */
+    void applyForOffShelf(String goodsId);
+
+    /**
+     * 支付下架费用，支付成功后创建wms出库单
+     *
+     * @param portalOffShelfPayDto 下架支付参数
+     */
+    void payForOffShelf(PortalOffShelfPayDto portalOffShelfPayDto);
+
+    /**
+     * 下架申请支付超时：仅当申请仍为「未支付(0)」时置为「超时未支付(2)」。
+     *
+     * @param offShelfId 下架申请id
+     * @return 本次是否更新成功
+     */
+    boolean markOffShelfPaymentTimeout(Long offShelfId);
+
+    /**
+     * 获取上架申请列表(merchant操作)
+     * @param pageNum 页数
+     * @param pageSize 页大小
+     * @param merchantId 商家id
+     * @return 上架申请列表
+     */
+    CommonResult<?> getGoodsApplication(int pageNum, int pageSize, String merchantId);
+
+    /**
+     * 获取属于商家的商品(merchant操作)
+     * @param pageNum 页数
+     * @param pageSize 页大小
+     * @param merchantId 商家id
+     * @return 商品列表
+     */
+    List<PortalGoodsDto> getPortalGoods(int pageNum, int pageSize, String merchantId);
+}
