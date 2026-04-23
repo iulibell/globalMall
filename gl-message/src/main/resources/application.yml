@@ -1,9 +1,9 @@
 server:
-  port: ${SERVER_PORT:8631}
+  port: ${SERVER_PORT:8203}
 
 spring:
   application:
-    name: gl-message
+    name: mall-gl-message
   cloud:
     loadbalancer:
       enabled: true

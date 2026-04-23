@@ -26,19 +26,7 @@ public class PortalServiceImpl implements PortalService {
     @Resource
     private PortalGoodsDao portalGoodsDao;
     @Resource
-    private AdminServiceClient adminServiceClient;
-    @Resource
-    private WmsServiceClient wmsServiceClient;
-    @Resource
     private PortalOffShelfDao portalOffShelfDao;
-
-    @Override
-    public void payForInbound(String applyId) {
-        wmsServiceClient.payForInbound(applyId);
-        PortalGoods portalGoods = new PortalGoods();
-        BeanUtils.copyProperties(adminServiceClient.getPortalDtoById(applyId), portalGoods);
-        portalGoodsDao.insert(portalGoods);
-    }
 
     @Override
     public void goodsOnShelf(PortalGoodsNeededDto portalGoodsNeededDto) {

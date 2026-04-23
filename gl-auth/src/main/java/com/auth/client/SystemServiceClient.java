@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.Map;
 
-@FeignClient("gl-system")
+@FeignClient("mall-gl-system")
 public interface SystemServiceClient {
 
     @PostMapping("/system/register")

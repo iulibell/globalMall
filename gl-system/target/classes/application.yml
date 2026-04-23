@@ -1,0 +1,49 @@
+server:
+  port: 8205
+
+spring:
+  application:
+    name: mall-gl-system
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+      key: gl-system:login:user
+      expire: 720
+  cloud:
+    loadbalancer:
+      enabled: true
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:127.0.0.1:8848}
+        group: ${NACOS_GROUP:DEFAULT_GROUP}
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/global_mall?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 123456
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+sa-token:
+  token-name: satoken
+  jwt-secret-key: globalMall-shared-jwt-secret-for-dev-DO-NOT-USE-in-prod-32b
+  timeout: 2592000
+  active-timeout: -1
+  is-concurrent: true
+  is-share: false
+  token-style: uuid
+  token-prefix: Bearer
+  is-log: true
+
+secure:
+  ignore:
+    urls: []
+
+security:
+  internal:
+    enabled: false
+    token-value: ${SECURITY_INTERNAL_TOKEN:}
+
+app:
+  register:
+    captcha:
+      debug-return: ${REGISTER_CAPTCHA_DEBUG_RETURN:true}

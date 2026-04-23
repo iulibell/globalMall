@@ -1,0 +1,54 @@
+:root {
+  --mall-black: #0a0a0b;
+  --mall-black-soft: #131318;
+  --mall-surface: #1a1a20;
+  --mall-surface-elevated: #222228;
+  --mall-border: #2e2e36;
+  --mall-orange: #ff8a00;
+  --mall-orange-bright: #ffa726;
+  --mall-orange-dim: #e65100;
+  --mall-orange-glow: rgba(255, 138, 0, 0.22);
+  --mall-text: #f4f4f5;
+  --mall-text-muted: #a1a1aa;
+  --mall-page-bg: #0d0d10;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: var(--mall-page-bg);
+  color: var(--mall-text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}

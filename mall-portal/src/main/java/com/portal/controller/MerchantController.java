@@ -14,6 +14,12 @@ public class MerchantController {
     @Resource
     private MerchantService merchantService;
 
+    @PostMapping("/payForInbound")
+    public CommonResult<?> payForInbound(@RequestParam String applyId){
+        merchantService.payForInbound(applyId);
+        return CommonResult.success("支付成功,请待司机上门取件");
+    }
+
     @PostMapping("/applyGoods")
     public CommonResult<?> applyGoods(@RequestBody PortalGoodsApplicationDto portalGoodsApplicationDto){
         merchantService.applyGoods(portalGoodsApplicationDto);

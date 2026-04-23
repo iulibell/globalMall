@@ -1,47 +1,52 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import MallHeader from './components/MallHeader.vue'
+
+const route = useRoute()
+const lastQuery = ref('')
+
+const showMallHeader = computed(() => route.meta.layout === 'mall')
+const showSearchToast = computed(() => route.name === 'home' && lastQuery.value)
+
+function onSearch(q) {
+  lastQuery.value = (q || '').trim()
+}
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
-  </header>
-
-  <main>
-    <TheWelcome />
-  </main>
+  <div class="app-shell">
+    <MallHeader v-if="showMallHeader" @search="onSearch" />
+    <p v-if="showSearchToast" class="search-toast container" role="status">
+      正在展示与「<strong>{{ lastQuery }}</strong>」相关的搜索结果（演示，后续可对接门户接口）。
+    </p>
+    <router-view />
+  </div>
 </template>
 
 <style scoped>
-header {
-  line-height: 1.5;
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 16px;
 }
 
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
+.search-toast {
+  margin: 0;
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  color: var(--mall-text-muted);
+  background: rgba(255, 138, 0, 0.08);
+  border-bottom: 1px solid var(--mall-border);
+}
 
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
+.search-toast strong {
+  color: var(--mall-orange-bright);
 }
 </style>

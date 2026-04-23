@@ -1,9 +1,9 @@
 server:
-  port: 8501
+  port: 8205
 
 spring:
   application:
-    name: gl-system
+    name: mall-gl-system
   data:
     redis:
       host: 127.0.0.1

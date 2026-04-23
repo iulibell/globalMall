@@ -24,7 +24,7 @@ spring:
         group: ${NACOS_GROUP:DEFAULT_GROUP}
 
 server:
-  port: 8601
+  port: 8206
 
 mybatis-plus:
   configuration:

@@ -9,6 +9,11 @@ import java.util.List;
 
 public interface MerchantService {
     /**
+     * 商家在上架申请审核通过后支付入库费用，前台侧同步创建商品基础信息。
+     * @param applyId 申请id
+     */
+    void payForInbound(String applyId);
+    /**
      * 商家申请上架商品(merchant操作)
      * @param portalGoodsApplicationDto 商品上架申请dto
      */

@@ -50,6 +50,14 @@ public class MerchantServiceImpl implements MerchantService {
     private WmsServiceClient wmsServiceClient;
 
     @Override
+    public void payForInbound(String applyId) {
+        wmsServiceClient.payForInbound(applyId);
+        PortalGoods portalGoods = new PortalGoods();
+        BeanUtils.copyProperties(adminServiceClient.getPortalDtoById(applyId), portalGoods);
+        portalGoodsDao.insert(portalGoods);
+    }
+
+    @Override
     public void applyGoods(PortalGoodsApplicationDto portalGoodsApplicationDto) {
         StpUtil.checkPermission("merchant");
         StpUtil.checkLogin();

@@ -1,6 +1,6 @@
 spring:
   application:
-    name: gl-gateway
+    name: mall-gl-gateway
   data:
     redis:
       host: 127.0.0.1
@@ -20,11 +20,11 @@ spring:
         webflux:
           routes:
             - id: gl-system
-              uri: ${SERVICE_URI_GL_SYSTEM:lb://gl-system}
+              uri: ${SERVICE_URI_GL_SYSTEM:lb://mall-gl-system}
               predicates:
                 - Path=/system/**
             - id: gl-auth
-              uri: ${SERVICE_URI_GL_AUTH:lb://gl-auth}
+              uri: ${SERVICE_URI_GL_AUTH:lb://mall-gl-auth}
               predicates:
                 - Path=/auth/**
             - id: mall-admin
@@ -45,7 +45,7 @@ spring:
                 - Path=/wms/**
 
 server:
-  port: ${GATEWAY_PORT:8502}
+  port: ${GATEWAY_PORT:8202}
 
 sa-token:
   token-name: satoken

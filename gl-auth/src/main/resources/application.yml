@@ -1,6 +1,6 @@
 spring:
   application:
-    name: gl-auth
+    name: mall-gl-auth
   data:
     redis:
       host: 127.0.0.1
@@ -19,7 +19,7 @@ spring:
         group: ${NACOS_GROUP:DEFAULT_GROUP}
 
 server:
-  port: 8602
+  port: 8201
 
 sa-token:
   token-name: satoken

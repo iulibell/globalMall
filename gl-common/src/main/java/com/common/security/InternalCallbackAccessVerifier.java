@@ -10,7 +10,8 @@ import org.springframework.web.server.ServerWebExchange;
 import java.util.List;
 
 /**
- * 仅校验 {@code /oms/sys/**}、{@code /wms/sys/**}、{@code /tms/sys/**} 与配置令牌是否一致。
+ * 校验内部回调路径与配置令牌是否一致：
+ * {@code /oms/sys/**}、{@code /wms/sys/**}、{@code /tms/sys/**}、{@code /portal/sys/**}、{@code /search/goods/**}。
  */
 public final class InternalCallbackAccessVerifier {
 
@@ -19,7 +20,9 @@ public final class InternalCallbackAccessVerifier {
     private static final List<String> INTERNAL_PATTERNS = List.of(
             "/oms/sys/**",
             "/wms/sys/**",
-            "/tms/sys/**"
+            "/tms/sys/**",
+            "/portal/sys/**",
+            "/search/goods/**"
     );
 
     private InternalCallbackAccessVerifier() {

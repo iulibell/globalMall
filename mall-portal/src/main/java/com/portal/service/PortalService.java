@@ -10,12 +10,6 @@ import java.util.List;
 
 public interface PortalService {
     /**
-     * 商家在上架申请审核通过后支付入库费用，前台侧同步创建商品基础信息。
-     * @param applyId 申请id
-     */
-    void payForInbound(String applyId);
-
-    /**
      * wms在确认入库后将上架商品并且补充商品所需的信息
      * @param portalGoodsNeededDto 商品所需补充的信息
      */

@@ -1,4 +1,3 @@
-C:\Users\Administrator\Desktop\system-interation\globalMall\gl-common\src\main\java\com\common\api\CommonPage.java
 C:\Users\Administrator\Desktop\system-interation\globalMall\gl-common\src\main\java\com\common\api\CommonResult.java
 C:\Users\Administrator\Desktop\system-interation\globalMall\gl-common\src\main\java\com\common\api\IErrorCode.java
 C:\Users\Administrator\Desktop\system-interation\globalMall\gl-common\src\main\java\com\common\api\ResultCode.java
@@ -9,6 +8,7 @@ C:\Users\Administrator\Desktop\system-interation\globalMall\gl-common\src\main\j
 C:\Users\Administrator\Desktop\system-interation\globalMall\gl-common\src\main\java\com\common\config\SaTokenWebMvcSecurityAutoConfig.java
 C:\Users\Administrator\Desktop\system-interation\globalMall\gl-common\src\main\java\com\common\config\SecurityWhitelistProperties.java
 C:\Users\Administrator\Desktop\system-interation\globalMall\gl-common\src\main\java\com\common\constant\AuthConstant.java
+C:\Users\Administrator\Desktop\system-interation\globalMall\gl-common\src\main\java\com\common\constant\PortalConstant.java
 C:\Users\Administrator\Desktop\system-interation\globalMall\gl-common\src\main\java\com\common\constant\RabbitConstant.java
 C:\Users\Administrator\Desktop\system-interation\globalMall\gl-common\src\main\java\com\common\constant\RedisConstant.java
 C:\Users\Administrator\Desktop\system-interation\globalMall\gl-common\src\main\java\com\common\constant\UrlConstant.java
