@@ -1,7 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { merchantApplyGoods } from '@/api/portal'
+import { fetchAvailableWarehouses, fetchGoodsTypes, merchantApplyGoods } from '@/api/portal'
 
 const router = useRouter()
 const route = useRoute()
@@ -28,16 +28,85 @@ const profileIncomplete = computed(
 )
 
 const form = ref({
+  typeId: '',
   skuName: '',
   price: '',
   applyQuantity: '',
   picture: '',
-  warehouseCity: '',
+  /** 选中的仓库 id（来自 getAvailableWarehouse），提交时映射为 warehouseCity */
+  warehouseId: '',
   description: '',
 })
 const submitting = ref(false)
 const tip = ref('')
 const error = ref('')
+const goodsTypes = ref([])
+const typesLoading = ref(false)
+const warehouses = ref([])
+const warehousesLoading = ref(false)
+
+async function loadGoodsTypes() {
+  if (!isMerchant.value || !token.value) {
+    goodsTypes.value = []
+    return
+  }
+  typesLoading.value = true
+  try {
+    const { ok, data } = await fetchGoodsTypes({ pageNum: 1, pageSize: 200 })
+    if (ok && data?.code === 200 && Array.isArray(data.data)) {
+      goodsTypes.value = data.data
+    } else {
+      goodsTypes.value = []
+    }
+  } catch {
+    goodsTypes.value = []
+  } finally {
+    typesLoading.value = false
+  }
+}
+
+async function loadWarehouses() {
+  if (!isMerchant.value || !token.value) {
+    warehouses.value = []
+    return
+  }
+  warehousesLoading.value = true
+  try {
+    const { ok, data } = await fetchAvailableWarehouses({ pageNum: 1, pageSize: 200 })
+    if (ok && data?.code === 200 && Array.isArray(data.data)) {
+      warehouses.value = data.data
+    } else {
+      warehouses.value = []
+    }
+  } catch {
+    warehouses.value = []
+  } finally {
+    warehousesLoading.value = false
+  }
+}
+
+function warehouseLabel(w) {
+  const city = (w?.city || '').trim()
+  const addr = (w?.address || '').trim()
+  const id = w?.warehouseId != null ? String(w.warehouseId) : ''
+  if (city && addr) return `${city} — ${addr}`
+  if (city) return city
+  if (addr) return addr
+  return id ? `仓库 #${id}` : '—'
+}
+
+function warehouseCityForSubmit() {
+  const id = (form.value.warehouseId || '').trim()
+  if (!id) return ''
+  const w = warehouses.value.find((x) => String(x?.warehouseId) === id)
+  if (!w) return ''
+  const city = (w.city || '').trim()
+  if (city) return city
+  const country = (w.country || '').trim()
+  if (country) return country
+  const addr = (w.address || '').trim()
+  return addr.slice(0, 20) || ''
+}
 
 function readPictureFile(file, inputEl) {
   if (!file) {
@@ -74,6 +143,8 @@ function triggerPicturePick() {
 
 onMounted(() => {
   syncMerchantAccountFromStorage()
+  loadGoodsTypes()
+  loadWarehouses()
 })
 
 watch(
@@ -81,9 +152,16 @@ watch(
   () => {
     if (route.name === 'merchant-apply-goods') {
       syncMerchantAccountFromStorage()
+      loadGoodsTypes()
+      loadWarehouses()
     }
   },
 )
+
+watch([isMerchant, token], () => {
+  loadGoodsTypes()
+  loadWarehouses()
+})
 
 async function submit() {
   const uid = userId.value
@@ -100,20 +178,25 @@ async function submit() {
     error.value = '请先在个人中心填写「手机号」后再申请上架'
     return
   }
+  const typeIdNum = Number(form.value.typeId)
   const skuName = form.value.skuName.trim()
   const picture = form.value.picture.trim()
-  const warehouseCity = form.value.warehouseCity.trim()
+  const warehouseCity = warehouseCityForSubmit().trim()
   const priceNum = Number(form.value.price)
   const applyQuantityNum = Number(form.value.applyQuantity)
   if (
+    !Number.isInteger(typeIdNum) ||
+    typeIdNum < 1 ||
     !skuName ||
     !picture ||
+    !(form.value.warehouseId || '').trim() ||
     !warehouseCity ||
     !Number.isFinite(priceNum) ||
     !Number.isInteger(applyQuantityNum) ||
     applyQuantityNum < 1
   ) {
-    error.value = '请填写商品名称、价格、申请数量、商品图片与仓库所属城市（申请数量需为正整数）'
+    error.value =
+      '请选择商品类型与入库仓库，并填写商品名称、价格、申请数量、商品图片（申请数量需为正整数）'
     return
   }
   submitting.value = true
@@ -123,6 +206,7 @@ async function submit() {
     const payload = {
       userId: uid,
       merchantId: uid,
+      typeId: typeIdNum,
       skuName,
       merchantPhone: merchantPhone.value,
       price: priceNum,
@@ -141,11 +225,12 @@ async function submit() {
     tip.value = typeof data?.data === 'string' ? data.data : data?.message || '申请成功'
     error.value = ''
     form.value = {
+      typeId: '',
       skuName: '',
       price: '',
       applyQuantity: '',
       picture: '',
-      warehouseCity: '',
+      warehouseId: '',
       description: '',
     }
     pictureFileName.value = ''
@@ -211,6 +296,19 @@ async function submit() {
         <p v-if="tip" class="msg">{{ tip }}</p>
         <p v-if="error" class="msg error">{{ error }}</p>
         <form class="apply-form" @submit.prevent="submit">
+          <label class="field field-full">
+            <span>商品类型</span>
+            <select v-model="form.typeId" class="input select-input" required>
+              <option value="" disabled>请选择类型</option>
+              <option v-for="t in goodsTypes" :key="t.typeId" :value="String(t.typeId)">
+                {{ t.typeName }}
+              </option>
+            </select>
+            <p v-if="typesLoading" class="field-hint">正在加载类型列表…</p>
+            <p v-else-if="isMerchant && goodsTypes.length === 0" class="field-hint warn">
+              暂无可用类型，请联系管理员在后台维护「商品类型」后再申请。
+            </p>
+          </label>
           <label class="field">
             <span>商品名称</span>
             <input v-model="form.skuName" type="text" class="input" autocomplete="off" />
@@ -223,9 +321,18 @@ async function submit() {
             <span>申请数量</span>
             <input v-model="form.applyQuantity" type="number" step="1" min="1" class="input" />
           </label>
-          <label class="field">
-            <span>仓库所属城市</span>
-            <input v-model="form.warehouseCity" type="text" class="input" />
+          <label class="field field-full">
+            <span>入库仓库</span>
+            <select v-model="form.warehouseId" class="input select-input" required>
+              <option value="" disabled>请选择仓库（来自物流系统）</option>
+              <option v-for="w in warehouses" :key="w.warehouseId" :value="String(w.warehouseId)">
+                {{ warehouseLabel(w) }}
+              </option>
+            </select>
+            <p v-if="warehousesLoading" class="field-hint">正在加载可选仓库…</p>
+            <p v-else-if="isMerchant && warehouses.length === 0" class="field-hint warn">
+              暂无可选仓库，请确认 logi-wms 已启动且存在可用仓库。
+            </p>
           </label>
           <label class="field field-full">
             <span>商品描述（选填）</span>
@@ -343,6 +450,7 @@ async function submit() {
 
 .head-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
 }
@@ -447,6 +555,21 @@ async function submit() {
   color: var(--mall-text);
   padding: 0 12px;
   font-size: 0.9rem;
+}
+
+.select-input {
+  cursor: pointer;
+  appearance: auto;
+}
+
+.field-hint {
+  margin: 4px 0 0;
+  font-size: 0.75rem;
+  color: var(--mall-text-muted);
+}
+
+.field-hint.warn {
+  color: #fbbf24;
 }
 
 .textarea {

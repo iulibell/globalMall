@@ -69,4 +69,13 @@ public class MerchantController {
         merchantService.updateInfo(sysUserInfoDto);
         return CommonResult.success("修改成功!");
     }
+
+    /**
+     * 申请商品上架时选择仓库：返回 logi-wms 中状态为启用的仓库分页列表（前端下拉用）。
+     */
+    @GetMapping("/getAvailableWarehouse")
+    public CommonResult<?> getAvailableWarehouse(@RequestParam(defaultValue = "1")int pageNum,
+                                                 @RequestParam(defaultValue = "10")int pageSize){
+        return CommonResult.success(merchantService.getAvailableWarehouse(pageNum, pageSize));
+    }
 }

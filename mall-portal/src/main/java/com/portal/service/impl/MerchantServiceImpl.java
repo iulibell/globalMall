@@ -87,7 +87,7 @@ public class MerchantServiceImpl implements MerchantService {
         StpUtil.checkLogin();
         StpUtil.checkPermission("merchant");
         if (StrUtil.isEmpty(portalGoodsApplicationDto.getSkuName()) || StrUtil.isEmpty(portalGoodsApplicationDto.getPicture())
-        || portalGoodsApplicationDto.getPrice() == null) {
+        || portalGoodsApplicationDto.getPrice() == null || portalGoodsApplicationDto.getTypeId() == null) {
             Assert.fail("商品信息不完整");
         }
 
@@ -241,6 +241,11 @@ public class MerchantServiceImpl implements MerchantService {
             BeanUtils.copyProperties(portalGoods,portalGoodsDto);
             return portalGoodsDto;
         }).getRecords();
+    }
+
+    @Override
+    public List<WmsWarehouseDto> getAvailableWarehouse(int pageNum, int pageSize) {
+        return wmsServiceClient.getAvailableWarehouse(pageNum, pageSize);
     }
 
     @Override

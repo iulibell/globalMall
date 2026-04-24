@@ -1,6 +1,7 @@
 package com.portal.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -21,12 +22,17 @@ public class PortalGoodsTypeServiceImpl implements PortalGoodsTypeService {
     @Resource
     private PortalGoodsTypeDao portalGoodsTypeDao;
 
+    /**
+     * 分页查询商品类型（名称字典）。
+     * 商家申请上架时通过 {@code GET /portal/getGoodsType} 拉取列表供选择；管理员亦用于维护。
+     */
     @Override
     public List<PortalGoodsTypeDto> getType(int pageNum, int pageSize) {
         StpUtil.checkLogin();
-        StpUtil.checkPermission("manager");
+        StpUtil.checkPermissionOr("manager","merchant");
         IPage<PortalGoodsType> page = new Page<>(pageNum,pageSize);
-        portalGoodsTypeDao.selectPage(page,null);
+        portalGoodsTypeDao.selectPage(page, new LambdaQueryWrapper<PortalGoodsType>()
+                .orderByAsc(PortalGoodsType::getTypeId));
         return page.convert(portalGoodsType -> {
             PortalGoodsTypeDto portalGoodsTypeDto = new PortalGoodsTypeDto();
             BeanUtils.copyProperties(portalGoodsType,portalGoodsTypeDto);

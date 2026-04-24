@@ -15,7 +15,7 @@ import com.portal.entity.PortalGoods;
 import com.portal.entity.PortalOffShelf;
 import com.portal.service.PortalService;
 import jakarta.annotation.Resource;
-import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
@@ -35,7 +35,7 @@ public class PortalServiceImpl implements PortalService {
     @Resource
     private RedisService redisService;
     @Resource
-    private Redisson redisson;
+    private RedissonClient redissonClient;
 
     @Override
     public void goodsOnShelf(PortalGoodsNeededDto portalGoodsNeededDto) {
@@ -110,7 +110,7 @@ public class PortalServiceImpl implements PortalService {
     @Override
     public void clickGoods(String goodsId) {
         String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        redisson.getAtomicLong(RedisConstant.VISIT_COUNT_PREFIX
+        redissonClient.getAtomicLong(RedisConstant.VISIT_COUNT_PREFIX
                 + date
                 + ":"
                 + goodsId).incrementAndGet();

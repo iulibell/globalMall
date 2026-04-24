@@ -6,7 +6,7 @@ import com.portal.dao.PortalGoodsDao;
 import com.portal.entity.PortalGoods;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
 import org.redisson.api.RLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -23,25 +23,25 @@ public class VisitVolumeIncrSchedule {
     @Resource
     private PortalGoodsDao portalGoodsDao;
     @Resource
-    private Redisson redisson;
+    private RedissonClient redissonClient;
 
     /**
      * 每 2 分钟扫描一次redis中含有浏览增值的商品
      */
     @Scheduled(cron = "0 */2 * * * ?")
     public void incrVisitVolume() throws InterruptedException {
-        RLock lock = redisson.getLock(RedisConstant.VISIT_COUNT_LOCK);
+        RLock lock = redissonClient.getLock(RedisConstant.VISIT_COUNT_LOCK);
         if (!lock.tryLock(RedisConstant.COUNT_LOCK_WAIT_TIME,RedisConstant.COUNT_LOCK_LEASE_TIME, TimeUnit.SECONDS))
             return;
         try{
         String date = LocalDate.now().format(DATE_FORMATTER);
         String pattern = RedisConstant.VISIT_COUNT_PREFIX
                 + date + ":*";
-        Iterable<String> ids = redisson.getKeys().getKeysByPattern(pattern);
+        Iterable<String> ids = redissonClient.getKeys().getKeysByPattern(pattern);
         for (String keys: ids) {
             String[] arr = keys.split(":");
             String goodsId = arr[3];
-            long delta = redisson.getAtomicLong(keys).getAndSet(0L);
+            long delta = redissonClient.getAtomicLong(keys).getAndSet(0L);
             if (delta <= 0) {
                 continue;
             }

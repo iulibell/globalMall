@@ -16,6 +16,9 @@ public class PortalGoodsApplicationDto {
     private String applyId;
     @NotBlank(message = "商品名称不能为空")
     private String skuName;
+    /** 对应 {@code portal_goods_type.type_id}，商家从 {@code /portal/getGoodsType} 选择 */
+    @NotNull(message = "商品类型不能为空")
+    private Long typeId;
     @NotBlank(message = "商家手机号不能为空")
     private String merchantPhone;
     @NotNull(message = "价格不能为空")

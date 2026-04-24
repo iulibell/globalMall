@@ -3,6 +3,16 @@ import { ref } from 'vue'
 import ProductCard from './ProductCard.vue'
 import HeroCarousel from './HeroCarousel.vue'
 import { fetchHotGoods } from '@/api/portal'
+import { useUiLang } from '@/composables/useUiLang.js'
+import { useMultiDictionary } from '@/composables/useMultiDictionary.js'
+import { pageDictFallback } from '@/utils/pageDictionaryFallback.js'
+
+const { uiLang } = useUiLang()
+const { t } = useMultiDictionary(['page_mall'], uiLang)
+
+function tx(key) {
+  return t('page_mall', key, pageDictFallback('page_mall', key, uiLang.value))
+}
 
 const hotLoading = ref(false)
 const hotError = ref('')
@@ -13,9 +23,10 @@ function toCard(item, i) {
   const imageUrl = (/^https?:\/\//i.test(picture) || /^data:/i.test(picture))
     ? picture
     : (picture ? `/src/assets/picture/${encodeURIComponent(picture)}` : '')
+  const goodsPrefix = t('page_mall', 'mall_goods_prefix', pageDictFallback('page_mall', 'mall_goods_prefix', uiLang.value))
   return {
     goodsId: item.goodsId != null ? String(item.goodsId) : '',
-    title: item.skuName || item.description || `商品 #${item.goodsId || i + 1}`,
+    title: item.skuName || item.description || `${goodsPrefix}${item.goodsId || i + 1}`,
     price: Number(item.price || 0).toFixed(2),
     rating: 4.2,
     reviews: 0,
@@ -31,14 +42,14 @@ async function fetchHomeHotGoods() {
   try {
     const { ok, data } = await fetchHotGoods({ pageNum: 1, pageSize: 12 })
     if (!ok || data?.code !== 200) {
-      hotError.value = data?.message || '热门商品加载失败'
+      hotError.value = data?.message || tx('mall_hot_load_fail')
       hotGoods.value = []
       return
     }
     const items = Array.isArray(data?.data) ? data.data : []
     hotGoods.value = items.map(toCard)
   } catch {
-    hotError.value = '热门商品请求失败，请确认 mall-portal 已启动'
+    hotError.value = tx('mall_hot_request_fail')
     hotGoods.value = []
   } finally {
     hotLoading.value = false
@@ -54,11 +65,11 @@ fetchHomeHotGoods()
 
     <section class="block container">
       <div class="block-head">
-        <h2>热门商品</h2>
+        <h2>{{ tx('mall_hot_title') }}</h2>
       </div>
-      <p v-if="hotLoading" class="status">正在加载热门商品...</p>
+      <p v-if="hotLoading" class="status">{{ tx('mall_hot_loading') }}</p>
       <p v-else-if="hotError" class="status error">{{ hotError }}</p>
-      <p v-else-if="hotGoods.length === 0" class="status">暂无热门商品</p>
+      <p v-else-if="hotGoods.length === 0" class="status">{{ tx('mall_hot_empty') }}</p>
       <div v-else class="grid">
         <ProductCard v-for="(p, i) in hotGoods" :key="'h-' + i" v-bind="p" />
       </div>
@@ -67,7 +78,7 @@ fetchHomeHotGoods()
     <footer class="site-footer">
       <div class="container footer-inner">
         <p class="copyright">
-          © {{ new Date().getFullYear() }} GlobalMall · 保留所有权利
+          © {{ new Date().getFullYear() }} GlobalMall · {{ tx('mall_footer_rights') }}
         </p>
       </div>
     </footer>

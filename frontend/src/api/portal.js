@@ -39,6 +39,24 @@ export async function fetchGoodsDetail(goodsId) {
   return { ok: res.ok, status: res.status, data }
 }
 
+/** 商品类型列表（需 manager 或 merchant 登录态，用于商家申请上架等） */
+export async function fetchGoodsTypes(params = {}) {
+  const res = await fetch(buildUrl('/portal/getGoodsType', params), {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
 export async function fetchHotGoods(params = {}) {
   const res = await fetch(buildUrl('/portal/hotGoods', params), {
     method: 'GET',
@@ -66,6 +84,24 @@ export async function merchantUpdateInfo(payload) {
       ...buildAuthHeader(),
     },
     body: JSON.stringify(body),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 商家可选仓库列表（logi-wms，需 merchant 登录态；申请上架选仓用） */
+export async function fetchAvailableWarehouses(params = {}) {
+  const res = await fetch(buildUrl('/portal/merchant/getAvailableWarehouse', params), {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
   })
   let data = {}
   try {

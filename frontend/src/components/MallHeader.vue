@@ -1,10 +1,22 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import MallLanguageDropdown from './MallLanguageDropdown.vue'
+import { useUiLang } from '@/composables/useUiLang.js'
+import { useMultiDictionary } from '@/composables/useMultiDictionary.js'
+import { pageDictFallback } from '@/utils/pageDictionaryFallback.js'
 
 const query = ref('')
+const searchScope = ref('all')
 const emit = defineEmits(['search'])
 const router = useRouter()
+
+const { uiLang } = useUiLang()
+const { t } = useMultiDictionary(['page_mall'], uiLang)
+
+function tx(key) {
+  return t('page_mall', key, pageDictFallback('page_mall', key, uiLang.value))
+}
 
 function onSearch() {
   emit('search', query.value)
@@ -18,7 +30,11 @@ const displayName = computed(() => {
   if (nickname) {
     return nickname
   }
-  return (localStorage.getItem('username') || '').trim() || '用户'
+  const username = (localStorage.getItem('username') || '').trim()
+  if (username) {
+    return username
+  }
+  return t('page_mall', 'header_default_user', pageDictFallback('page_mall', 'header_default_user', uiLang.value))
 })
 
 function logout() {
@@ -39,17 +55,23 @@ function logout() {
     <div class="top-bar">
       <div class="container top-inner">
         <nav class="top-links" aria-label="快捷链接">
-          <a href="#">简体中文</a>
+          <MallLanguageDropdown />
           <div v-if="isLoggedIn" class="user-menu">
-            <button type="button" class="user-trigger" @click="router.push({ name: 'profile' })">您好，{{ displayName }}</button>
+            <button type="button" class="user-trigger" @click="router.push({ name: 'profile' })">
+              {{ tx('header_guest_hi') }}{{ displayName }}
+            </button>
             <div class="user-dropdown">
-              <button type="button" class="dropdown-item" @click="router.push({ name: 'profile' })">个人中心</button>
-              <button type="button" class="dropdown-item danger" @click="logout">退出登录</button>
+              <button type="button" class="dropdown-item" @click="router.push({ name: 'profile' })">
+                {{ tx('header_profile') }}
+              </button>
+              <button type="button" class="dropdown-item danger" @click="logout">
+                {{ tx('header_logout') }}
+              </button>
             </div>
           </div>
-          <RouterLink v-else to="/login">您好，请登录</RouterLink>
-          <RouterLink v-if="!isLoggedIn" to="/register">免费注册</RouterLink>
-          <a href="#">退换货与订单</a>
+          <RouterLink v-else to="/login">{{ tx('header_guest_hi') }}{{ tx('header_login_link') }}</RouterLink>
+          <RouterLink v-if="!isLoggedIn" to="/register">{{ tx('header_register_link') }}</RouterLink>
+          <a href="#">{{ tx('header_returns') }}</a>
         </nav>
       </div>
     </div>
@@ -62,20 +84,20 @@ function logout() {
         </RouterLink>
 
         <form class="search" @submit.prevent="onSearch">
-          <select class="search-scope" aria-label="搜索范围">
-            <option>全部</option>
-            <option>数码</option>
-            <option>家居</option>
-            <option>服饰</option>
+          <select v-model="searchScope" class="search-scope" :aria-label="tx('header_search_placeholder')">
+            <option value="all">{{ tx('header_scope_all') }}</option>
+            <option value="digital">{{ tx('header_scope_digital') }}</option>
+            <option value="home">{{ tx('header_scope_home') }}</option>
+            <option value="fashion">{{ tx('header_scope_fashion') }}</option>
           </select>
           <input
             v-model="query"
             type="search"
             class="search-input"
-            placeholder="搜索 GlobalMall 商品"
+            :placeholder="tx('header_search_placeholder')"
             autocomplete="off"
           />
-          <button type="submit" class="search-btn" aria-label="搜索">
+          <button type="submit" class="search-btn" :aria-label="tx('header_search_placeholder')">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
               <circle cx="11" cy="11" r="7" />
               <path d="M20 20l-4.35-4.35" />
@@ -84,7 +106,7 @@ function logout() {
         </form>
 
         <div class="main-actions">
-          <a class="cart" href="#" aria-label="购物车">
+          <a class="cart" href="#" :aria-label="tx('header_cart')">
             <span class="cart-count">0</span>
             <svg width="36" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
               <path d="M6 6h15l-1.5 9h-12z" />
@@ -92,7 +114,7 @@ function logout() {
               <circle cx="18" cy="20" r="1.5" fill="currentColor" stroke="none" />
               <path d="M6 6 5 3H2" />
             </svg>
-            <span class="cart-label">购物车</span>
+            <span class="cart-label">{{ tx('header_cart') }}</span>
           </a>
         </div>
       </div>
@@ -102,14 +124,14 @@ function logout() {
       <div class="container sub-inner">
         <button type="button" class="all-dept" aria-expanded="false">
           <span class="hamburger" />
-          全部分类
+          {{ tx('header_all_cats') }}
         </button>
         <nav class="sub-links" aria-label="商品分类与频道">
-          <a href="#">今日特惠</a>
-          <a href="#">客户服务</a>
-          <a href="#">礼品清单</a>
-          <a href="#">礼品卡</a>
-          <a href="#">我要开店</a>
+          <a href="#">{{ tx('header_sub_today') }}</a>
+          <a href="#">{{ tx('header_sub_service') }}</a>
+          <a href="#">{{ tx('header_sub_gift_list') }}</a>
+          <a href="#">{{ tx('header_sub_giftcard') }}</a>
+          <a href="#">{{ tx('header_sub_sell') }}</a>
         </nav>
       </div>
     </div>
@@ -145,6 +167,7 @@ function logout() {
 
 .top-links {
   display: flex;
+  align-items: center;
   gap: 18px;
 }
 

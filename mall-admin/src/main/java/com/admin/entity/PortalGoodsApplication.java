@@ -27,6 +27,8 @@ public class PortalGoodsApplication {
     @Size(max = 50)
     @Schema(description = "商品名称")
     private String skuName;
+    @Schema(description = "商品类型id（portal_goods_type.type_id）")
+    private Long typeId;
     @Size(max = 10)
     @Schema(description = "商品价格")
     private BigDecimal price;

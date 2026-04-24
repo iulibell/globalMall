@@ -3,8 +3,17 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ProductCard from '@/components/ProductCard.vue'
 import { searchGoods } from '@/api/search'
+import { useUiLang } from '@/composables/useUiLang.js'
+import { useMultiDictionary } from '@/composables/useMultiDictionary.js'
+import { pageDictFallback } from '@/utils/pageDictionaryFallback.js'
 
 const route = useRoute()
+const { uiLang } = useUiLang()
+const { t } = useMultiDictionary(['page_mall'], uiLang)
+
+function tx(key) {
+  return t('page_mall', key, pageDictFallback('page_mall', key, uiLang.value))
+}
 const searching = ref(false)
 const searchError = ref('')
 const searchResults = ref([])
@@ -16,9 +25,10 @@ function toCard(item, i) {
   const imageUrl = (/^https?:\/\//i.test(picture) || /^data:/i.test(picture))
     ? picture
     : (picture ? `/src/assets/picture/${encodeURIComponent(picture)}` : '')
+  const goodsPrefix = t('page_mall', 'mall_goods_prefix', pageDictFallback('page_mall', 'mall_goods_prefix', uiLang.value))
   return {
     goodsId: item.goodsId != null ? String(item.goodsId) : '',
-    title: item.skuName || item.description || `商品 #${item.goodsId || i + 1}`,
+    title: item.skuName || item.description || `${goodsPrefix}${item.goodsId || i + 1}`,
     price: Number(item.price || 0).toFixed(2),
     rating: 4.2,
     reviews: 0,
@@ -40,14 +50,14 @@ async function fetchSearchResults(query) {
   try {
     const { ok, data } = await searchGoods({ query: q, page: 0, size: 12 })
     if (!ok || data?.code !== 200) {
-      searchError.value = data?.message || '搜索服务不可用，请稍后重试'
+      searchError.value = data?.message || tx('search_service_err')
       searchResults.value = []
       return
     }
     const items = Array.isArray(data?.data?.items) ? data.data.items : []
     searchResults.value = items.map(toCard)
   } catch {
-    searchError.value = '搜索请求失败，请确认 gl-search 已启动'
+    searchError.value = tx('search_request_fail')
     searchResults.value = []
   } finally {
     searching.value = false
@@ -67,13 +77,13 @@ watch(
   <main class="search-page container">
     <section class="block">
       <div class="block-head">
-        <h2>搜索结果</h2>
-        <span class="result-tip">关键词：{{ searchQuery || '（空）' }}</span>
+        <h2>{{ tx('search_title') }}</h2>
+        <span class="result-tip">{{ tx('search_keyword_label') }}{{ searchQuery || tx('search_keyword_empty') }}</span>
       </div>
-      <p v-if="searching" class="status">正在搜索商品...</p>
+      <p v-if="searching" class="status">{{ tx('search_loading') }}</p>
       <p v-else-if="searchError" class="status error">{{ searchError }}</p>
-      <p v-else-if="!searchQuery" class="status">请输入关键词进行搜索</p>
-      <p v-else-if="searchResults.length === 0" class="status">暂无匹配商品</p>
+      <p v-else-if="!searchQuery" class="status">{{ tx('search_empty_keyword') }}</p>
+      <p v-else-if="searchResults.length === 0" class="status">{{ tx('search_empty_results') }}</p>
       <div v-else class="grid">
         <ProductCard v-for="(p, i) in searchResults" :key="'s-' + i" v-bind="p" />
       </div>

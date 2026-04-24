@@ -2,10 +2,20 @@
 import { computed, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import MallHeader from './components/MallHeader.vue'
+import { useUiLang } from '@/composables/useUiLang.js'
+import { useMultiDictionary } from '@/composables/useMultiDictionary.js'
+import { pageDictFallback } from '@/utils/pageDictionaryFallback.js'
 
 const route = useRoute()
 const router = useRouter()
 const lastQuery = ref('')
+
+const { uiLang } = useUiLang()
+const { t } = useMultiDictionary(['page_mall'], uiLang)
+
+function tx(key) {
+  return t('page_mall', key, pageDictFallback('page_mall', key, uiLang.value))
+}
 
 const showMallHeader = computed(() => route.meta.layout === 'mall')
 const showSearchToast = computed(() => route.name === 'search' && lastQuery.value)
@@ -21,7 +31,7 @@ function onSearch(q) {
   <div class="app-shell">
     <MallHeader v-if="showMallHeader" @search="onSearch" />
     <p v-if="showSearchToast" class="search-toast container" role="status">
-      正在展示与「<strong>{{ lastQuery }}</strong>」相关的搜索结果。
+      {{ tx('mall_search_toast_prefix') }}<strong>{{ lastQuery }}</strong>{{ tx('mall_search_toast_suffix') }}
     </p>
     <router-view />
   </div>

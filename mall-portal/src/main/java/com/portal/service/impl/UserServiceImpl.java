@@ -11,8 +11,6 @@ import com.portal.service.OmsCartService;
 import com.portal.service.UserService;
 import com.portal.service.client.OmsServiceClient;
 import jakarta.annotation.Resource;
-import org.redisson.Redisson;
-import org.redisson.api.RLongAdder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -25,8 +23,6 @@ public class UserServiceImpl implements UserService {
     private OmsServiceClient omsServiceClient;
     @Resource
     private OmsCartService omsCartService;
-    @Resource
-    private Redisson redisson;
 
     @Override
     public CommonResult<?> addOrder(OmsOrderDto omsOrderDto) {

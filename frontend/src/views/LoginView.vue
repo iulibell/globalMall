@@ -1,9 +1,19 @@
 ﻿<script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { login } from '@/api/systemAuth'
+import { useUiLang } from '@/composables/useUiLang.js'
+import { useMultiDictionary } from '@/composables/useMultiDictionary.js'
+import { pageDictFallback } from '@/utils/pageDictionaryFallback.js'
 
 const router = useRouter()
+
+const { uiLang } = useUiLang()
+const { t } = useMultiDictionary(['page_mall'], uiLang)
+
+function tx(key) {
+  return t('page_mall', key, pageDictFallback('page_mall', key, uiLang.value))
+}
 
 const username = ref('')
 const password = ref('')
@@ -11,13 +21,13 @@ const requiredRoleKey = ref('user')
 const submitting = ref(false)
 const errorMsg = ref('')
 
-const roles = [
-  { value: 'super', label: '超级管理员' },
-  { value: 'manager', label: '管理员' },
-  { value: 'merchant', label: '商家' },
-  { value: 'user', label: '普通用户' },
-  { value: 'reviewer', label: '审核员' },
-]
+const roles = computed(() => [
+  { value: 'super', label: tx('role_super') },
+  { value: 'manager', label: tx('role_manager') },
+  { value: 'merchant', label: tx('role_merchant') },
+  { value: 'user', label: tx('role_user') },
+  { value: 'reviewer', label: tx('role_reviewer') },
+])
 
 async function onSubmit() {
   errorMsg.value = ''
@@ -52,9 +62,9 @@ async function onSubmit() {
       await router.push({ name: 'home' })
       return
     }
-    errorMsg.value = data?.message || (ok ? '登录失败' : `请求失败 (${data?.code ?? '?'})`)
+    errorMsg.value = data?.message || tx('login_fail_generic')
   } catch (e) {
-    errorMsg.value = '网络异常，请确认 gl-system 已启动（默认 8205）'
+    errorMsg.value = tx('login_fail_network')
   } finally {
     submitting.value = false
   }
@@ -68,20 +78,20 @@ async function onSubmit() {
         <span class="logo-mark">GM</span>
         <span class="logo-text">Global<span class="accent">Mall</span></span>
       </RouterLink>
-      <h1 class="title">登录</h1>
-      <p class="hint">使用 gl-system 账号；身份需与库中 userType 一致。</p>
+      <h1 class="title">{{ tx('login_title') }}</h1>
+      <p class="hint">{{ tx('login_hint') }}</p>
 
       <form class="form" @submit.prevent="onSubmit">
         <label class="field">
-          <span class="label">用户名</span>
+          <span class="label">{{ tx('login_username') }}</span>
           <input v-model="username" type="text" autocomplete="username" required class="input" />
         </label>
         <label class="field">
-          <span class="label">密码</span>
+          <span class="label">{{ tx('login_password') }}</span>
           <input v-model="password" type="password" autocomplete="current-password" required class="input" />
         </label>
         <label class="field">
-          <span class="label">登录身份</span>
+          <span class="label">{{ tx('login_role_label') }}</span>
           <select v-model="requiredRoleKey" class="input select" required>
             <option v-for="r in roles" :key="r.value" :value="r.value">{{ r.label }}（{{ r.value }}）</option>
           </select>
@@ -90,13 +100,13 @@ async function onSubmit() {
         <p v-if="errorMsg" class="error" role="alert">{{ errorMsg }}</p>
 
         <button type="submit" class="submit" :disabled="submitting">
-          {{ submitting ? '登录中…' : '登录' }}
+          {{ submitting ? tx('login_submitting') : tx('login_submit') }}
         </button>
       </form>
 
       <p class="footer-link">
-        还没有账号？
-        <RouterLink to="/register">去注册</RouterLink>
+        {{ tx('login_register_prompt') }}
+        <RouterLink to="/register">{{ tx('login_register_link') }}</RouterLink>
       </p>
     </div>
   </div>

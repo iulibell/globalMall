@@ -1,6 +1,16 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useUiLang } from '@/composables/useUiLang.js'
+import { useMultiDictionary } from '@/composables/useMultiDictionary.js'
+import { pageDictFallback } from '@/utils/pageDictionaryFallback.js'
+
+const { uiLang } = useUiLang()
+const { t } = useMultiDictionary(['page_mall'], uiLang)
+
+function tx(key) {
+  return t('page_mall', key, pageDictFallback('page_mall', key, uiLang.value))
+}
 
 const props = defineProps({
   title: { type: String, required: true },
@@ -49,7 +59,7 @@ function onImageError() {
       <p class="price">
         <span class="currency">¥</span>{{ price }}
       </p>
-      <button type="button" class="add" @click.stop>加入购物车</button>
+      <button type="button" class="add" @click.stop>{{ tx('product_add_cart') }}</button>
     </div>
   </article>
 </template>

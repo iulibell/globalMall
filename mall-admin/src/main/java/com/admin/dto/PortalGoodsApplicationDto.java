@@ -14,6 +14,8 @@ public class PortalGoodsApplicationDto {
     private String merchantId;
     @NotBlank(message = "商品名称不能为空")
     private String skuName;
+    @NotNull(message = "商品类型不能为空")
+    private Long typeId;
     @NotNull(message = "价格不能为空")
     private BigDecimal price;
     @NotBlank(message = "商家手机号不能为空")

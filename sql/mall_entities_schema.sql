@@ -62,6 +62,7 @@ CREATE TABLE `goods_application` (
   `merchant_id` varchar(255) DEFAULT NULL COMMENT '商家id',
   `merchant_phone` varchar(11) DEFAULT NULL COMMENT '商家手机号',
   `sku_name` varchar(50) DEFAULT NULL,
+  `type_id` bigint DEFAULT NULL COMMENT '商品类型id（portal_goods_type.type_id）',
   `price` decimal(10,2) DEFAULT NULL,
   `picture` varchar(255) DEFAULT NULL COMMENT '商品图片',
   `description` varchar(500) DEFAULT NULL COMMENT '商品描述',

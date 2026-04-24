@@ -1,10 +1,7 @@
 package com.portal.service;
 
 import com.common.api.CommonResult;
-import com.portal.dto.PortalOffShelfPayDto;
-import com.portal.dto.PortalGoodsApplicationDto;
-import com.portal.dto.PortalGoodsDto;
-import com.portal.dto.SysUserInfoDto;
+import com.portal.dto.*;
 
 import java.util.List;
 
@@ -63,6 +60,14 @@ public interface MerchantService {
      * @return 商品列表
      */
     List<PortalGoodsDto> getPortalGoods(int pageNum, int pageSize, String merchantId);
+
+    /**
+     * 获取logi系统中可用的仓库供商家商品上架申请时选择
+     * @param pageNum 页数
+     * @param pageSize 页大小
+     * @return 可用仓库列表
+     */
+    List<WmsWarehouseDto> getAvailableWarehouse(int pageNum, int pageSize);
 
     /**
      * 更新个人信息(merchant操作)

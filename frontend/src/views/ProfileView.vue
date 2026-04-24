@@ -16,9 +16,31 @@ import {
   updateSuperUser,
 } from '@/api/admin'
 import { fetchMerchantPortalGoods, merchantApplyForOffShelf, merchantUpdateInfo } from '@/api/portal'
+import MallLanguageDropdown from '@/components/MallLanguageDropdown.vue'
+import { useUiLang } from '@/composables/useUiLang.js'
+import { useMultiDictionary } from '@/composables/useMultiDictionary.js'
+import { pageDictFallback } from '@/utils/pageDictionaryFallback.js'
+
+const R_HOME = 'r_home'
+const R_REG = 'r_register'
+const R_GOODS = 'r_goods_apply'
+const S_HOME = 's_home'
+const S_USERS = 's_users'
+const S_TYPE = 's_type'
+const S_ID = 's_id'
+const M_OVER = 'm_overview'
+const M_APPLY_LIST = 'm_apply_list'
+const M_MY_GOODS = 'm_my_goods'
 
 const router = useRouter()
 const route = useRoute()
+
+const { uiLang } = useUiLang()
+const { t } = useMultiDictionary(['page_mall', 'page_mall_profile'], uiLang)
+
+function txp(key) {
+  return t('page_mall_profile', key, pageDictFallback('page_mall_profile', key, uiLang.value))
+}
 
 /** 与登录/保存写入的 localStorage 同步，供商城侧账户卡片展示（localStorage 非响应式，用 ref 承接） */
 const mallSessionPhone = ref('')
@@ -37,27 +59,54 @@ const userId = computed(() => localStorage.getItem('userId') || '')
 const isAdminCenterRole = computed(() => ['super', 'manager', 'reviewer'].includes(role.value))
 const isMallCenterRole = computed(() => ['merchant', 'user'].includes(role.value))
 
-const displayName = computed(() => nickname.value || username.value || '未命名用户')
+const displayName = computed(() => {
+  const nn = (nickname.value || username.value || '').trim()
+  if (nn) return nn
+  return txp('profile_display_unnamed')
+})
 
-const roleLabelMap = {
-  super: '超级管理员',
-  manager: '管理员',
-  reviewer: '审核员',
-  merchant: '商家',
-  user: '普通用户',
-}
+const roleLabel = computed(() => {
+  const map = {
+    super: 'role_super',
+    manager: 'role_manager',
+    reviewer: 'role_reviewer',
+    merchant: 'role_merchant',
+    user: 'role_user',
+  }
+  const dk = map[role.value]
+  if (dk) {
+    return t('page_mall', dk, pageDictFallback('page_mall', dk, uiLang.value))
+  }
+  return (role.value || '').trim() || txp('profile_role_not_logged')
+})
 
-const roleLabel = computed(() => roleLabelMap[role.value] || role.value || '未登录')
+const reviewerTabs = computed(() => [
+  { key: R_HOME, label: txp('profile_tab_home') },
+  { key: R_REG, label: txp('profile_tab_register') },
+  { key: R_GOODS, label: txp('profile_tab_goods_apply') },
+])
 
-const reviewerSidebarItems = computed(() => (role.value === 'reviewer' ? ['首页', '注册申请', '上架申请'] : []))
-const superSidebarItems = computed(() => (role.value === 'super' ? ['首页', '用户列表', '身份查询', 'id查询'] : []))
+const superTabs = computed(() => [
+  { key: S_HOME, label: txp('profile_tab_home') },
+  { key: S_USERS, label: txp('profile_super_tab_users') },
+  { key: S_TYPE, label: txp('profile_super_tab_type') },
+  { key: S_ID, label: txp('profile_super_tab_id') },
+])
+
 const adminSidebarItems = computed(() => {
-  if (role.value === 'reviewer') return reviewerSidebarItems.value
-  if (role.value === 'super') return superSidebarItems.value
+  if (role.value === 'reviewer') return reviewerTabs.value
+  if (role.value === 'super') return superTabs.value
   return []
 })
-const reviewerActiveTab = ref('首页')
-const superActiveTab = ref('首页')
+
+const merchantTabs = computed(() => [
+  { key: M_OVER, label: txp('profile_merchant_overview') },
+  { key: M_APPLY_LIST, label: txp('profile_merchant_apply_list') },
+  { key: M_MY_GOODS, label: txp('profile_merchant_my_goods') },
+])
+
+const reviewerActiveTab = ref(R_HOME)
+const superActiveTab = ref(S_HOME)
 const registerAppsLoading = ref(false)
 const registerAppsError = ref('')
 const registerApps = ref([])
@@ -91,7 +140,7 @@ const editForm = ref({
 const deleteDialogVisible = ref(false)
 const deleteSubmitting = ref(false)
 const deleteTarget = ref(null)
-const merchantActiveTab = ref('账户概览')
+const merchantActiveTab = ref(M_OVER)
 
 const merchantProfileForm = ref({
   nickname: '',
@@ -149,7 +198,7 @@ function syncMerchantProfileForm() {
 async function submitMerchantProfile() {
   const uid = (userId.value || '').trim()
   if (!uid) {
-    merchantProfileError.value = '缺少用户 ID，请重新登录后再试'
+    merchantProfileError.value = txp('profile_err_missing_uid')
     return
   }
   merchantProfileSubmitting.value = true
@@ -167,11 +216,11 @@ async function submitMerchantProfile() {
     }
     const { ok, data } = await merchantUpdateInfo(payload)
     if (!ok || data?.code !== 200) {
-      merchantProfileError.value = data?.message || '保存失败'
+      merchantProfileError.value = data?.message || txp('profile_save_failed')
       return
     }
     merchantProfileTip.value =
-      typeof data?.data === 'string' ? data.data : data?.message || '修改成功'
+      typeof data?.data === 'string' ? data.data : data?.message || txp('profile_save_ok')
     localStorage.setItem('nickname', payload.nickname)
     if (payload.phone != null && String(payload.phone).trim() !== '') {
       localStorage.setItem('phone', String(payload.phone).trim())
@@ -186,7 +235,7 @@ async function submitMerchantProfile() {
     merchantProfileForm.value.password = ''
     refreshMallSessionFromStorage()
   } catch {
-    merchantProfileError.value = '网络异常，请确认 mall-portal 已启动'
+    merchantProfileError.value = txp('profile_net_portal')
   } finally {
     merchantProfileSubmitting.value = false
   }
@@ -195,7 +244,7 @@ async function submitMerchantProfile() {
 async function submitOffShelfApply() {
   const goodsId = offShelfGoodsId.value.trim()
   if (!goodsId) {
-    offShelfError.value = '请输入要下架的商品ID'
+    offShelfError.value = txp('profile_off_shelf_need_id')
     return
   }
   offShelfSubmitting.value = true
@@ -204,37 +253,35 @@ async function submitOffShelfApply() {
   try {
     const { ok, data } = await merchantApplyForOffShelf(goodsId)
     if (!ok || data?.code !== 200) {
-      offShelfError.value = data?.message || '下架申请提交失败'
+      offShelfError.value = data?.message || txp('profile_off_shelf_fail')
       return
     }
-    offShelfTip.value = typeof data?.data === 'string' ? data.data : data?.message || '下架申请已提交'
+    offShelfTip.value = typeof data?.data === 'string' ? data.data : data?.message || txp('profile_off_shelf_ok')
     offShelfGoodsId.value = ''
   } catch {
-    offShelfError.value = '网络异常，请确认 mall-portal 已启动'
+    offShelfError.value = txp('profile_net_portal')
   } finally {
     offShelfSubmitting.value = false
   }
 }
 
-const merchantSidebarItems = ['账户概览', '申请列表', '我的商品']
-
-function setMerchantTab(item) {
-  merchantActiveTab.value = item
-  if (item === '申请列表') {
+function setMerchantTab(key) {
+  merchantActiveTab.value = key
+  if (key === M_APPLY_LIST) {
     loadMerchantApplyList()
     return
   }
-  if (item === '我的商品') {
+  if (key === M_MY_GOODS) {
     loadMerchantGoodsList()
   }
 }
 
 function payStatusText(v) {
   const s = Number(v)
-  if (s === 0) return '待支付'
-  if (s === 1) return '已支付'
-  if (s === 2) return '超时未支付'
-  return '未知'
+  if (s === 0) return txp('pay_pending')
+  if (s === 1) return txp('pay_paid')
+  if (s === 2) return txp('pay_timeout')
+  return txp('pay_unknown')
 }
 
 function canPayApply(row) {
@@ -275,20 +322,20 @@ async function loadMerchantApplyList() {
     })
     if (!ok || data?.code !== 200) {
       merchantApplyList.value = []
-      merchantApplyListError.value = data?.message || '获取申请列表失败'
+      merchantApplyListError.value = data?.message || txp('profile_apply_list_fail')
       return
     }
     merchantApplyList.value = Array.isArray(data?.data) ? data.data : []
   } catch {
     merchantApplyList.value = []
-    merchantApplyListError.value = '网络异常，请确认 mall-admin 已启动'
+    merchantApplyListError.value = txp('profile_net_admin')
   } finally {
     merchantApplyListLoading.value = false
   }
 }
 
 function portalGoodsStatusText(v) {
-  return Number(v) === 1 ? '已上架' : '未上架'
+  return Number(v) === 1 ? txp('portal_on_shelf') : txp('portal_off_shelf')
 }
 
 function canViewGoodsDetail(row) {
@@ -302,7 +349,7 @@ function goGoodsDetail(row) {
 }
 
 function categoryText(v) {
-  return Number(v) === 1 ? '特殊商品' : '普通商品'
+  return Number(v) === 1 ? txp('category_special') : txp('category_normal')
 }
 
 async function loadMerchantGoodsList() {
@@ -318,41 +365,41 @@ async function loadMerchantGoodsList() {
     })
     if (!ok || data?.code !== 200) {
       merchantGoodsList.value = []
-      merchantGoodsListError.value = data?.message || '获取我的商品失败'
+      merchantGoodsListError.value = data?.message || txp('profile_goods_list_fail')
       return
     }
     merchantGoodsList.value = Array.isArray(data?.data) ? data.data : []
   } catch {
     merchantGoodsList.value = []
-    merchantGoodsListError.value = '网络异常，请确认 mall-portal 已启动'
+    merchantGoodsListError.value = txp('profile_net_portal')
   } finally {
     merchantGoodsListLoading.value = false
   }
 }
 
-function isAdminTabActive(item) {
+function isAdminTabActive(key) {
   if (role.value === 'reviewer') {
-    return reviewerActiveTab.value === item
+    return reviewerActiveTab.value === key
   }
   if (role.value === 'super') {
-    return superActiveTab.value === item
+    return superActiveTab.value === key
   }
   return false
 }
 
-function setAdminTab(item) {
+function setAdminTab(key) {
   if (role.value === 'reviewer') {
-    reviewerActiveTab.value = item
+    reviewerActiveTab.value = key
     return
   }
   if (role.value === 'super') {
-    superActiveTab.value = item
+    superActiveTab.value = key
   }
 }
 
 const showAdminHome = computed(() => {
-  if (role.value === 'reviewer') return reviewerActiveTab.value === '首页'
-  if (role.value === 'super') return superActiveTab.value === '首页'
+  if (role.value === 'reviewer') return reviewerActiveTab.value === R_HOME
+  if (role.value === 'super') return superActiveTab.value === S_HOME
   return true
 })
 
@@ -366,13 +413,13 @@ async function loadRegisterApplications() {
     })
     if (!ok || data?.code !== 200) {
       registerApps.value = []
-      registerAppsError.value = data?.message || '获取注册申请失败'
+      registerAppsError.value = data?.message || txp('profile_reg_list_fail')
       return
     }
     registerApps.value = Array.isArray(data?.data) ? data.data : []
   } catch {
     registerApps.value = []
-    registerAppsError.value = '网络异常，请确认 mall-admin 已启动'
+    registerAppsError.value = txp('profile_net_admin')
   } finally {
     registerAppsLoading.value = false
   }
@@ -397,15 +444,15 @@ function reviewedText(row) {
   if (status === 0) {
     return ''
   }
-  return '已审核'
+  return txp('reg_done')
 }
 
 function registerStatusText(status) {
   const s = Number(status)
-  if (s === 0) return '待审核'
-  if (s === 1) return '已审核'
-  if (s === 2) return '已退回'
-  return '未知'
+  if (s === 0) return txp('reg_pending')
+  if (s === 1) return txp('reg_done')
+  if (s === 2) return txp('reg_rejected')
+  return txp('status_unknown')
 }
 
 async function approveRow(row) {
@@ -413,12 +460,12 @@ async function approveRow(row) {
   try {
     const { ok, data } = await approveRegisterApplication(toRegisterPayload(row))
     if (!ok || data?.code !== 200) {
-      registerAppsError.value = data?.message || '通过失败'
+      registerAppsError.value = data?.message || txp('profile_action_fail')
       return
     }
     await loadRegisterApplications()
   } catch {
-    registerAppsError.value = '通过失败，请稍后重试'
+    registerAppsError.value = `${txp('profile_action_fail')}，${txp('profile_try_later')}`
   } finally {
     actingPhone.value = ''
   }
@@ -429,12 +476,12 @@ async function rejectRow(row) {
   try {
     const { ok, data } = await rejectRegisterApplication(toRegisterPayload(row))
     if (!ok || data?.code !== 200) {
-      registerAppsError.value = data?.message || '退回失败'
+      registerAppsError.value = data?.message || txp('profile_action_fail')
       return
     }
     await loadRegisterApplications()
   } catch {
-    registerAppsError.value = '退回失败，请稍后重试'
+    registerAppsError.value = `${txp('profile_action_fail')}，${txp('profile_try_later')}`
   } finally {
     actingPhone.value = ''
   }
@@ -450,13 +497,13 @@ async function loadGoodsApplications() {
     })
     if (!ok || data?.code !== 200) {
       goodsApplyList.value = []
-      goodsApplyError.value = data?.message || '获取上架申请失败'
+      goodsApplyError.value = data?.message || txp('profile_goods_apply_fail')
       return
     }
     goodsApplyList.value = Array.isArray(data?.data) ? data.data : []
   } catch {
     goodsApplyList.value = []
-    goodsApplyError.value = '网络异常，请确认 mall-admin 已启动'
+    goodsApplyError.value = txp('profile_net_admin')
   } finally {
     goodsApplyLoading.value = false
   }
@@ -468,33 +515,33 @@ function canOperateGoodsApply(row) {
 
 function mallGoodsApplyStatusText(status) {
   const s = Number(status)
-  if (s === 0) return '待审核'
-  if (s === 1) return '已通过'
-  if (s === 2) return '已退回'
-  if (s === 3) return '已取消'
-  return '未知'
+  if (s === 0) return txp('mall_apply_pending')
+  if (s === 1) return txp('mall_apply_passed')
+  if (s === 2) return txp('mall_apply_rejected')
+  if (s === 3) return txp('mall_apply_cancelled')
+  return txp('status_unknown')
 }
 
 function logisticGoodsApplyStatusText(status) {
   const s = Number(status)
-  if (s === 0) return '待审核'
-  if (s === 1) return '已通过'
-  if (s === 2) return '已退回'
-  return '未知'
+  if (s === 0) return txp('log_apply_pending')
+  if (s === 1) return txp('log_apply_passed')
+  if (s === 2) return txp('log_apply_rejected')
+  return txp('status_unknown')
 }
 
 function userTypeText(v) {
   const s = String(v ?? '').trim()
-  if (s === '1') return '超级管理员'
-  if (s === '2') return '管理员'
-  if (s === '3') return '商家'
-  if (s === '4') return '普通用户'
-  if (s === '5') return '审核员'
-  return s || '-'
+  if (s === '1') return txp('ut_super')
+  if (s === '2') return txp('ut_manager')
+  if (s === '3') return txp('ut_merchant')
+  if (s === '4') return txp('ut_user')
+  if (s === '5') return txp('ut_reviewer')
+  return s || txp('profile_empty_dash')
 }
 
 function userStatusText(v) {
-  return Number(v) === 0 ? '禁用' : '启用'
+  return Number(v) === 0 ? txp('user_disabled') : txp('user_enabled')
 }
 
 
@@ -508,13 +555,13 @@ async function loadSuperUsers() {
     })
     if (!ok || data?.code !== 200) {
       superUsers.value = []
-      superError.value = data?.message || '获取用户列表失败'
+      superError.value = data?.message || txp('profile_super_list_fail')
       return
     }
     superUsers.value = Array.isArray(data?.data) ? data.data : []
   } catch {
     superUsers.value = []
-    superError.value = '网络异常，请确认 mall-admin 已启动'
+    superError.value = txp('profile_net_admin')
   } finally {
     superLoading.value = false
   }
@@ -531,13 +578,13 @@ async function loadSuperUsersByType() {
     })
     if (!ok || data?.code !== 200) {
       superUsers.value = []
-      superError.value = data?.message || '身份查询失败'
+      superError.value = data?.message || txp('profile_super_type_fail')
       return
     }
     superUsers.value = Array.isArray(data?.data) ? data.data : []
   } catch {
     superUsers.value = []
-    superError.value = '网络异常，请确认 mall-admin 已启动'
+    superError.value = txp('profile_net_admin')
   } finally {
     superLoading.value = false
   }
@@ -545,7 +592,7 @@ async function loadSuperUsersByType() {
 
 async function loadSuperUserById() {
   if (!superQueryUserId.value.trim()) {
-    superError.value = '请输入用户ID'
+    superError.value = txp('profile_super_id_empty')
     superUsers.value = []
     return
   }
@@ -555,7 +602,7 @@ async function loadSuperUserById() {
     const { ok, data } = await fetchSuperUserById(superQueryUserId.value.trim())
     if (!ok || data?.code !== 200) {
       superUsers.value = []
-      superError.value = data?.message || 'ID查询失败'
+      superError.value = data?.message || txp('profile_super_id_fail')
       return
     }
     if (Array.isArray(data?.data)) {
@@ -567,7 +614,7 @@ async function loadSuperUserById() {
     }
   } catch {
     superUsers.value = []
-    superError.value = '网络异常，请确认 mall-admin 已启动'
+    superError.value = txp('profile_net_admin')
   } finally {
     superLoading.value = false
   }
@@ -596,13 +643,13 @@ async function submitEdit() {
       status: Number(editForm.value.status),
     })
     if (!ok || data?.code !== 200) {
-      superError.value = data?.message || '更新失败'
+      superError.value = data?.message || txp('profile_update_fail')
       return
     }
     editDialogVisible.value = false
     await reloadSuperCurrentTab()
   } catch {
-    superError.value = '更新失败，请稍后重试'
+    superError.value = `${txp('profile_update_fail')}，${txp('profile_try_later')}`
   } finally {
     editSubmitting.value = false
   }
@@ -621,25 +668,25 @@ async function confirmDelete() {
   try {
     const { ok, data } = await deleteSuperUser(deleteTarget.value.userId)
     if (!ok || data?.code !== 200) {
-      superError.value = data?.message || '删除失败'
+      superError.value = data?.message || txp('profile_delete_fail')
       return
     }
     deleteDialogVisible.value = false
     deleteTarget.value = null
     await reloadSuperCurrentTab()
   } catch {
-    superError.value = '删除失败，请稍后重试'
+    superError.value = `${txp('profile_delete_fail')}，${txp('profile_try_later')}`
   } finally {
     deleteSubmitting.value = false
   }
 }
 
 async function reloadSuperCurrentTab() {
-  if (superActiveTab.value === '用户列表') {
+  if (superActiveTab.value === S_USERS) {
     await loadSuperUsers()
-  } else if (superActiveTab.value === '身份查询') {
+  } else if (superActiveTab.value === S_TYPE) {
     await loadSuperUsersByType()
-  } else if (superActiveTab.value === 'id查询') {
+  } else if (superActiveTab.value === S_ID) {
     await loadSuperUserById()
   }
 }
@@ -649,12 +696,12 @@ async function approveGoodsRow(row) {
   try {
     const { ok, data } = await approveGoodsApplication(row.applyId)
     if (!ok || data?.code !== 200) {
-      goodsApplyError.value = data?.message || '通过失败'
+      goodsApplyError.value = data?.message || txp('profile_action_fail')
       return
     }
     await loadGoodsApplications()
   } catch {
-    goodsApplyError.value = '通过失败，请稍后重试'
+    goodsApplyError.value = `${txp('profile_action_fail')}，${txp('profile_try_later')}`
   } finally {
     actingApplyId.value = ''
   }
@@ -665,15 +712,15 @@ async function rejectGoodsRow(row) {
   try {
     const { ok, data } = await rejectGoodsApplication({
       applyId: row.applyId,
-      remark: row.remark || '审核退回',
+      remark: row.remark || txp('goods_apply_reject_remark'),
     })
     if (!ok || data?.code !== 200) {
-      goodsApplyError.value = data?.message || '退回失败'
+      goodsApplyError.value = data?.message || txp('profile_action_fail')
       return
     }
     await loadGoodsApplications()
   } catch {
-    goodsApplyError.value = '退回失败，请稍后重试'
+    goodsApplyError.value = `${txp('profile_action_fail')}，${txp('profile_try_later')}`
   } finally {
     actingApplyId.value = ''
   }
@@ -682,10 +729,10 @@ async function rejectGoodsRow(row) {
 watch(
   () => reviewerActiveTab.value,
   (tab) => {
-    if (role.value === 'reviewer' && tab === '注册申请') {
+    if (role.value === 'reviewer' && tab === R_REG) {
       loadRegisterApplications()
     }
-    if (role.value === 'reviewer' && tab === '上架申请') {
+    if (role.value === 'reviewer' && tab === R_GOODS) {
       loadGoodsApplications()
     }
   },
@@ -695,11 +742,11 @@ watch(
   () => superActiveTab.value,
   (tab) => {
     if (role.value !== 'super') return
-    if (tab === '用户列表') {
+    if (tab === S_USERS) {
       loadSuperUsers()
-    } else if (tab === '身份查询') {
+    } else if (tab === S_TYPE) {
       loadSuperUsersByType()
-    } else if (tab === 'id查询') {
+    } else if (tab === S_ID) {
       superUsers.value = []
       superError.value = ''
     }
@@ -741,11 +788,11 @@ onMounted(() => {
 watch(
   () => merchantActiveTab.value,
   (tab) => {
-    if (role.value === 'merchant' && tab === '申请列表') {
+    if (role.value === 'merchant' && tab === M_APPLY_LIST) {
       loadMerchantApplyList()
       return
     }
-    if (role.value === 'merchant' && tab === '我的商品') {
+    if (role.value === 'merchant' && tab === M_MY_GOODS) {
       loadMerchantGoodsList()
     }
   },
@@ -755,31 +802,32 @@ watch(
 <template>
   <div class="profile-page">
     <section v-if="!token" class="forbidden-card">
-      <h1>请先登录后查看个人主页</h1>
-      <p>当前未检测到登录态，请先完成登录。</p>
+      <h1>{{ txp('profile_need_login_title') }}</h1>
+      <p>{{ txp('profile_need_login_desc') }}</p>
       <div class="action-row">
-        <button class="btn ghost" @click="router.push({ name: 'home' })">返回首页</button>
-        <button class="btn primary" @click="goLogin">去登录</button>
+        <MallLanguageDropdown />
+        <button class="btn ghost" @click="router.push({ name: 'home' })">{{ txp('profile_back_home') }}</button>
+        <button class="btn primary" @click="goLogin">{{ txp('profile_go_login') }}</button>
       </div>
     </section>
 
     <div v-else-if="isAdminCenterRole" class="profile-layout admin-layout">
       <aside class="sidebar">
         <div class="sidebar-head">
-          <p class="eyebrow">GLOBALMALL CENTER</p>
-          <h2>个人中心</h2>
-          <p class="welcome">欢迎你，{{ displayName }}</p>
+          <p class="eyebrow">{{ txp('profile_globalmall_center') }}</p>
+          <h2>{{ txp('profile_center_title') }}</h2>
+          <p class="welcome">{{ txp('profile_sidebar_welcome') }}{{ displayName }}</p>
         </div>
         <nav v-if="adminSidebarItems.length" class="menu">
           <button
             v-for="item in adminSidebarItems"
-            :key="item"
+            :key="item.key"
             type="button"
             class="menu-item"
-            :class="{ active: isAdminTabActive(item) }"
-            @click="setAdminTab(item)"
+            :class="{ active: isAdminTabActive(item.key) }"
+            @click="setAdminTab(item.key)"
           >
-            {{ item }}
+            {{ item.label }}
           </button>
         </nav>
       </aside>
@@ -788,74 +836,74 @@ watch(
         <header class="content-head">
           <div>
             <p class="role-tag">{{ roleLabel }}</p>
-            <h1>账户主页</h1>
+            <h1>{{ txp('profile_account_home') }}</h1>
           </div>
           <div class="head-actions">
-            <button class="btn ghost" @click="router.push({ name: 'home' })">返回首页</button>
-            <button class="btn ghost" @click="logout">退出登录</button>
+            <MallLanguageDropdown />
+            <button class="btn ghost" @click="router.push({ name: 'home' })">{{ txp('profile_back_home') }}</button>
+            <button class="btn ghost" @click="logout">{{ txp('profile_logout') }}</button>
           </div>
         </header>
 
         <section v-if="showAdminHome" class="cards">
           <article class="card">
-            <p class="card-label">昵称</p>
+            <p class="card-label">{{ txp('profile_col_nickname') }}</p>
             <p class="card-value">{{ displayName }}</p>
           </article>
           <article class="card">
-            <p class="card-label">用户名</p>
-            <p class="card-value">{{ username || '-' }}</p>
+            <p class="card-label">{{ txp('profile_col_username') }}</p>
+            <p class="card-value">{{ username || txp('profile_empty_dash') }}</p>
           </article>
           <article class="card">
-            <p class="card-label">用户ID</p>
-            <p class="card-value">{{ userId || '-' }}</p>
+            <p class="card-label">{{ txp('profile_user_id_col') }}</p>
+            <p class="card-value">{{ userId || txp('profile_empty_dash') }}</p>
           </article>
         </section>
 
         <section v-if="showAdminHome" class="panel">
-          <h3>工作台</h3>
-          <p>该区域保留 logistic 风格布局，适配 `super`、`manager`、`reviewer` 管理角色。</p>
+          <h3>{{ txp('profile_workbench_title') }}</h3>
+          <p>{{ txp('profile_workbench_desc') }}</p>
         </section>
 
-        <section v-if="role === 'reviewer' && reviewerActiveTab === '注册申请'" class="panel">
-          <h3>注册申请</h3>
+        <section v-if="role === 'reviewer' && reviewerActiveTab === R_REG" class="panel">
+          <h3>{{ txp('profile_tab_register') }}</h3>
           <div class="register-filter">
             <label>
-              页码
+              {{ txp('profile_page') }}
               <input v-model.number="registerPageNum" type="number" min="1" class="mini-input" />
             </label>
             <label>
-              条数
+              {{ txp('profile_page_size') }}
               <input v-model.number="registerPageSize" type="number" min="1" class="mini-input" />
             </label>
-            <button class="btn ghost" @click="loadRegisterApplications">刷新</button>
+            <button class="btn ghost" @click="loadRegisterApplications">{{ txp('profile_refresh') }}</button>
           </div>
-          <p v-if="registerAppsLoading" class="panel-tip">加载中...</p>
+          <p v-if="registerAppsLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
           <p v-else-if="registerAppsError" class="panel-tip error">{{ registerAppsError }}</p>
-          <p v-else-if="registerApps.length === 0" class="panel-tip">暂无注册申请</p>
+          <p v-else-if="registerApps.length === 0" class="panel-tip">{{ txp('profile_reg_empty') }}</p>
           <div v-else class="table-wrap">
             <table class="table">
               <thead>
                 <tr>
-                  <th>用户名</th>
-                  <th>昵称</th>
-                  <th>身份</th>
-                  <th>手机号</th>
-                  <th>Mall审核</th>
-                  <th>Logistic审核</th>
-                  <th>操作</th>
+                  <th>{{ txp('profile_col_username') }}</th>
+                  <th>{{ txp('profile_col_nickname') }}</th>
+                  <th>{{ txp('profile_col_role_type') }}</th>
+                  <th>{{ txp('profile_col_phone') }}</th>
+                  <th>{{ txp('profile_col_mall_audit') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="row in registerApps" :key="row.id">
                   <td>{{ row.username }}</td>
-                  <td>{{ row.nickname || '-' }}</td>
-                  <td>{{ row.userType }}</td>
+                  <td>{{ row.nickname || txp('profile_empty_dash') }}</td>
+                  <td>{{ userTypeText(row.userType) }}</td>
                   <td>{{ row.phone }}</td>
                   <td>{{ registerStatusText(row.status) }}</td>
                   <td class="op-cell">
                     <template v-if="isPendingRegister(row)">
-                      <button class="op-btn pass" :disabled="actingPhone === row.phone" @click="approveRow(row)">通过</button>
-                      <button class="op-btn reject" :disabled="actingPhone === row.phone" @click="rejectRow(row)">退回</button>
+                      <button class="op-btn pass" :disabled="actingPhone === row.phone" @click="approveRow(row)">{{ txp('profile_pass') }}</button>
+                      <button class="op-btn reject" :disabled="actingPhone === row.phone" @click="rejectRow(row)">{{ txp('profile_reject') }}</button>
                     </template>
                     <span v-else class="reviewed-tag">{{ reviewedText(row) }}</span>
                   </td>
@@ -865,32 +913,33 @@ watch(
           </div>
         </section>
 
-        <section v-if="role === 'reviewer' && reviewerActiveTab === '上架申请'" class="panel">
-          <h3>上架申请</h3>
+        <section v-if="role === 'reviewer' && reviewerActiveTab === R_GOODS" class="panel">
+          <h3>{{ txp('profile_tab_goods_apply') }}</h3>
           <div class="register-filter">
             <label>
-              页码
+              {{ txp('profile_page') }}
               <input v-model.number="goodsApplyPageNum" type="number" min="1" class="mini-input" />
             </label>
             <label>
-              条数
+              {{ txp('profile_page_size') }}
               <input v-model.number="goodsApplyPageSize" type="number" min="1" class="mini-input" />
             </label>
-            <button class="btn ghost" @click="loadGoodsApplications">刷新</button>
+            <button class="btn ghost" @click="loadGoodsApplications">{{ txp('profile_refresh') }}</button>
           </div>
-          <p v-if="goodsApplyLoading" class="panel-tip">加载中...</p>
+          <p v-if="goodsApplyLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
           <p v-else-if="goodsApplyError" class="panel-tip error">{{ goodsApplyError }}</p>
-          <p v-else-if="goodsApplyList.length === 0" class="panel-tip">暂无上架申请</p>
+          <p v-else-if="goodsApplyList.length === 0" class="panel-tip">{{ txp('profile_goods_apply_empty') }}</p>
           <div v-else class="table-wrap">
             <table class="table">
               <thead>
                 <tr>
-                  <th>申请ID</th>
-                  <th>商家ID</th>
-                  <th>商品名</th>
-                  <th>价格</th>
-                  <th>状态</th>
-                  <th>操作</th>
+                  <th>{{ txp('profile_apply_id') }}</th>
+                  <th>{{ txp('profile_merchant_id') }}</th>
+                  <th>{{ txp('profile_goods_name') }}</th>
+                  <th>{{ txp('profile_price') }}</th>
+                  <th>{{ txp('profile_col_mall_audit') }}</th>
+                  <th>{{ txp('profile_col_logistic_audit') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -903,10 +952,10 @@ watch(
                   <td>{{ logisticGoodsApplyStatusText(row.logisticStatus) }}</td>
                   <td class="op-cell">
                     <template v-if="canOperateGoodsApply(row)">
-                      <button class="op-btn pass" :disabled="actingApplyId === row.applyId" @click="approveGoodsRow(row)">通过</button>
-                      <button class="op-btn reject" :disabled="actingApplyId === row.applyId" @click="rejectGoodsRow(row)">退回</button>
+                      <button class="op-btn pass" :disabled="actingApplyId === row.applyId" @click="approveGoodsRow(row)">{{ txp('profile_pass') }}</button>
+                      <button class="op-btn reject" :disabled="actingApplyId === row.applyId" @click="rejectGoodsRow(row)">{{ txp('profile_reject') }}</button>
                     </template>
-                    <span v-else class="reviewed-tag">已审核</span>
+                    <span v-else class="reviewed-tag">{{ txp('profile_reviewed') }}</span>
                   </td>
                 </tr>
               </tbody>
@@ -914,46 +963,46 @@ watch(
           </div>
         </section>
 
-        <section v-if="role === 'super' && superActiveTab === '用户列表'" class="panel">
-          <h3>用户列表</h3>
+        <section v-if="role === 'super' && superActiveTab === S_USERS" class="panel">
+          <h3>{{ txp('profile_super_tab_users') }}</h3>
           <div class="register-filter">
             <label>
-              页码
+              {{ txp('profile_page') }}
               <input v-model.number="superPageNum" type="number" min="1" class="mini-input" />
             </label>
             <label>
-              条数
+              {{ txp('profile_page_size') }}
               <input v-model.number="superPageSize" type="number" min="1" class="mini-input" />
             </label>
-            <button class="btn ghost" @click="loadSuperUsers">刷新</button>
+            <button class="btn ghost" @click="loadSuperUsers">{{ txp('profile_refresh') }}</button>
           </div>
-          <p v-if="superLoading" class="panel-tip">加载中...</p>
+          <p v-if="superLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
           <p v-else-if="superError" class="panel-tip error">{{ superError }}</p>
-          <p v-else-if="superUsers.length === 0" class="panel-tip">暂无用户数据</p>
+          <p v-else-if="superUsers.length === 0" class="panel-tip">{{ txp('profile_user_list_empty') }}</p>
           <div v-else class="table-wrap">
             <table class="table">
               <thead>
                 <tr>
-                  <th>用户ID</th>
-                  <th>用户名</th>
-                  <th>昵称</th>
-                  <th>身份</th>
-                  <th>状态</th>
-                  <th>操作</th>
+                  <th>{{ txp('profile_user_id_col') }}</th>
+                  <th>{{ txp('profile_col_username') }}</th>
+                  <th>{{ txp('profile_col_nickname') }}</th>
+                  <th>{{ txp('profile_col_role_type') }}</th>
+                  <th>{{ txp('profile_status') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="row in superUsers" :key="row.userId">
                   <td>{{ row.userId }}</td>
                   <td>{{ row.username }}</td>
-                  <td>{{ row.nickname || '-' }}</td>
+                  <td>{{ row.nickname || txp('profile_empty_dash') }}</td>
                   <td>{{ userTypeText(row.userType) }}</td>
                   <td>
                     <span class="status-tag" :class="{ disabled: Number(row.status) === 0 }">{{ userStatusText(row.status) }}</span>
                   </td>
                   <td class="op-cell">
-                    <button class="op-btn pass" @click="openEditDialog(row)">更新</button>
-                    <button class="op-btn reject" @click="openDeleteDialog(row)">删除</button>
+                    <button class="op-btn pass" @click="openEditDialog(row)">{{ txp('profile_btn_update') }}</button>
+                    <button class="op-btn reject" @click="openDeleteDialog(row)">{{ txp('profile_btn_delete') }}</button>
                   </td>
                 </tr>
               </tbody>
@@ -961,56 +1010,56 @@ watch(
           </div>
         </section>
 
-        <section v-if="role === 'super' && superActiveTab === '身份查询'" class="panel">
-          <h3>身份查询</h3>
+        <section v-if="role === 'super' && superActiveTab === S_TYPE" class="panel">
+          <h3>{{ txp('profile_super_tab_type') }}</h3>
           <div class="register-filter">
             <label>
-              身份
+              {{ txp('profile_super_query_type') }}
               <select v-model="superQueryType" class="mini-input">
-                <option value="1">超级管理员</option>
-                <option value="2">管理员</option>
-                <option value="3">商家</option>
-                <option value="4">普通用户</option>
-                <option value="5">审核员</option>
+                <option value="1">{{ txp('ut_super') }}</option>
+                <option value="2">{{ txp('ut_manager') }}</option>
+                <option value="3">{{ txp('ut_merchant') }}</option>
+                <option value="4">{{ txp('ut_user') }}</option>
+                <option value="5">{{ txp('ut_reviewer') }}</option>
               </select>
             </label>
             <label>
-              页码
+              {{ txp('profile_page') }}
               <input v-model.number="superTypePageNum" type="number" min="1" class="mini-input" />
             </label>
             <label>
-              条数
+              {{ txp('profile_page_size') }}
               <input v-model.number="superTypePageSize" type="number" min="1" class="mini-input" />
             </label>
-            <button class="btn ghost" @click="loadSuperUsersByType">查询</button>
+            <button class="btn ghost" @click="loadSuperUsersByType">{{ txp('profile_query') }}</button>
           </div>
-          <p v-if="superLoading" class="panel-tip">加载中...</p>
+          <p v-if="superLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
           <p v-else-if="superError" class="panel-tip error">{{ superError }}</p>
-          <p v-else-if="superUsers.length === 0" class="panel-tip">暂无匹配数据</p>
+          <p v-else-if="superUsers.length === 0" class="panel-tip">{{ txp('profile_no_match') }}</p>
           <div v-else class="table-wrap">
             <table class="table">
               <thead>
                 <tr>
-                  <th>用户ID</th>
-                  <th>用户名</th>
-                  <th>昵称</th>
-                  <th>身份</th>
-                  <th>状态</th>
-                  <th>操作</th>
+                  <th>{{ txp('profile_user_id_col') }}</th>
+                  <th>{{ txp('profile_col_username') }}</th>
+                  <th>{{ txp('profile_col_nickname') }}</th>
+                  <th>{{ txp('profile_col_role_type') }}</th>
+                  <th>{{ txp('profile_status') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="row in superUsers" :key="row.userId">
                   <td>{{ row.userId }}</td>
                   <td>{{ row.username }}</td>
-                  <td>{{ row.nickname || '-' }}</td>
+                  <td>{{ row.nickname || txp('profile_empty_dash') }}</td>
                   <td>{{ userTypeText(row.userType) }}</td>
                   <td>
                     <span class="status-tag" :class="{ disabled: Number(row.status) === 0 }">{{ userStatusText(row.status) }}</span>
                   </td>
                   <td class="op-cell">
-                    <button class="op-btn pass" @click="openEditDialog(row)">更新</button>
-                    <button class="op-btn reject" @click="openDeleteDialog(row)">删除</button>
+                    <button class="op-btn pass" @click="openEditDialog(row)">{{ txp('profile_btn_update') }}</button>
+                    <button class="op-btn reject" @click="openDeleteDialog(row)">{{ txp('profile_btn_delete') }}</button>
                   </td>
                 </tr>
               </tbody>
@@ -1018,42 +1067,42 @@ watch(
           </div>
         </section>
 
-        <section v-if="role === 'super' && superActiveTab === 'id查询'" class="panel">
-          <h3>ID查询</h3>
+        <section v-if="role === 'super' && superActiveTab === S_ID" class="panel">
+          <h3>{{ txp('profile_super_tab_id') }}</h3>
           <div class="register-filter">
             <label>
-              用户ID
+              {{ txp('profile_super_query_user_id') }}
               <input v-model="superQueryUserId" type="text" class="mini-input" />
             </label>
-            <button class="btn ghost" @click="loadSuperUserById">查询</button>
+            <button class="btn ghost" @click="loadSuperUserById">{{ txp('profile_query') }}</button>
           </div>
-          <p v-if="superLoading" class="panel-tip">加载中...</p>
+          <p v-if="superLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
           <p v-else-if="superError" class="panel-tip error">{{ superError }}</p>
-          <p v-else-if="superUsers.length === 0" class="panel-tip">未找到该用户</p>
+          <p v-else-if="superUsers.length === 0" class="panel-tip">{{ txp('profile_user_not_found') }}</p>
           <div v-else class="table-wrap">
             <table class="table">
               <thead>
                 <tr>
-                  <th>用户ID</th>
-                  <th>用户名</th>
-                  <th>昵称</th>
-                  <th>身份</th>
-                  <th>状态</th>
-                  <th>操作</th>
+                  <th>{{ txp('profile_user_id_col') }}</th>
+                  <th>{{ txp('profile_col_username') }}</th>
+                  <th>{{ txp('profile_col_nickname') }}</th>
+                  <th>{{ txp('profile_col_role_type') }}</th>
+                  <th>{{ txp('profile_status') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="row in superUsers" :key="row.userId">
                   <td>{{ row.userId }}</td>
                   <td>{{ row.username }}</td>
-                  <td>{{ row.nickname || '-' }}</td>
+                  <td>{{ row.nickname || txp('profile_empty_dash') }}</td>
                   <td>{{ userTypeText(row.userType) }}</td>
                   <td>
                     <span class="status-tag" :class="{ disabled: Number(row.status) === 0 }">{{ userStatusText(row.status) }}</span>
                   </td>
                   <td class="op-cell">
-                    <button class="op-btn pass" @click="openEditDialog(row)">更新</button>
-                    <button class="op-btn reject" @click="openDeleteDialog(row)">删除</button>
+                    <button class="op-btn pass" @click="openEditDialog(row)">{{ txp('profile_btn_update') }}</button>
+                    <button class="op-btn reject" @click="openDeleteDialog(row)">{{ txp('profile_btn_delete') }}</button>
                   </td>
                 </tr>
               </tbody>
@@ -1066,20 +1115,20 @@ watch(
 
     <div v-else-if="isMallCenterRole" class="profile-layout mall-layout">
       <aside class="amazon-side">
-        <h2>你的账户</h2>
-        <p class="welcome">Hi，{{ displayName }}</p>
-        <p class="sub">角色：{{ roleLabel }}</p>
-        <button class="btn ghost side-btn" @click="router.push({ name: 'home' })">继续逛商城</button>
+        <h2>{{ txp('profile_your_account') }}</h2>
+        <p class="welcome">{{ txp('profile_hi') }}{{ displayName }}</p>
+        <p class="sub">{{ txp('profile_role_prefix') }}{{ roleLabel }}</p>
+        <button class="btn ghost side-btn" @click="router.push({ name: 'home' })">{{ txp('profile_continue_shop') }}</button>
         <div v-if="role === 'merchant'" class="merchant-side-tabs">
           <button
-            v-for="item in merchantSidebarItems"
-            :key="item"
+            v-for="item in merchantTabs"
+            :key="item.key"
             type="button"
             class="btn ghost side-btn merchant-side-tab"
-            :class="{ active: merchantActiveTab === item }"
-            @click="setMerchantTab(item)"
+            :class="{ active: merchantActiveTab === item.key }"
+            @click="setMerchantTab(item.key)"
           >
-            {{ item }}
+            {{ item.label }}
           </button>
         </div>
       </aside>
@@ -1087,127 +1136,128 @@ watch(
       <main class="amazon-main">
         <header class="amazon-head">
           <div>
-            <p class="amazon-eyebrow">GLOBALMALL ACCOUNT</p>
-            <h1>Amazon 风个人主页</h1>
+            <p class="amazon-eyebrow">{{ txp('profile_main_eyebrow') }}</p>
+            <h1>{{ txp('profile_main_title') }}</h1>
           </div>
           <div class="head-actions">
-            <button class="btn ghost" @click="router.push({ name: 'home' })">返回首页</button>
-            <button class="btn ghost" @click="logout">退出登录</button>
+            <MallLanguageDropdown />
+            <button class="btn ghost" @click="router.push({ name: 'home' })">{{ txp('profile_back_home') }}</button>
+            <button class="btn ghost" @click="logout">{{ txp('profile_logout') }}</button>
           </div>
         </header>
 
         <section class="amazon-grid">
           <article class="amazon-card">
-            <h3>账户信息</h3>
-            <p>用户名：{{ username || '-' }}</p>
-            <p>用户ID：{{ userId || '-' }}</p>
-            <p>手机号：{{ mallSessionPhone || '—' }}</p>
-            <p v-if="mallSessionCity">所在城市：{{ mallSessionCity }}</p>
+            <h3>{{ txp('profile_card_info') }}</h3>
+            <p>{{ txp('profile_lbl_username') }}{{ username || txp('profile_empty_dash') }}</p>
+            <p>{{ txp('profile_lbl_user_id') }}{{ userId || txp('profile_empty_dash') }}</p>
+            <p>{{ txp('profile_lbl_phone') }}{{ mallSessionPhone || txp('profile_em_dash') }}</p>
+            <p v-if="mallSessionCity">{{ txp('profile_lbl_city') }}{{ mallSessionCity }}</p>
           </article>
           <article class="amazon-card">
-            <h3>安全与支付</h3>
-            <p>管理登录信息、支付方式与隐私偏好。</p>
+            <h3>{{ txp('profile_card_security') }}</h3>
+            <p>{{ txp('profile_card_security_desc') }}</p>
           </article>
         </section>
 
-        <section v-if="role === 'merchant' && merchantActiveTab === '账户概览'" class="amazon-panel merchant-edit">
-          <h3>修改信息</h3>
-          <p class="merchant-edit-hint">修改后将同步到系统账号资料（需商家登录态）。</p>
+        <section v-if="role === 'merchant' && merchantActiveTab === M_OVER" class="amazon-panel merchant-edit">
+          <h3>{{ txp('profile_edit_title') }}</h3>
+          <p class="merchant-edit-hint">{{ txp('profile_edit_hint') }}</p>
           <p v-if="merchantProfileTip" class="merchant-edit-msg">{{ merchantProfileTip }}</p>
           <p v-if="merchantProfileError" class="merchant-edit-msg error">{{ merchantProfileError }}</p>
           <form class="merchant-edit-form" @submit.prevent="submitMerchantProfile">
             <label class="merchant-field">
-              <span>用户 ID</span>
-              <input type="text" class="merchant-input" :value="userId || '-'" disabled />
+              <span>{{ txp('profile_field_uid') }}</span>
+              <input type="text" class="merchant-input" :value="userId || txp('profile_empty_dash')" disabled />
             </label>
             <label class="merchant-field">
-              <span>昵称</span>
+              <span>{{ txp('profile_field_nickname') }}</span>
               <input v-model="merchantProfileForm.nickname" type="text" class="merchant-input" autocomplete="nickname" />
             </label>
             <label class="merchant-field">
-              <span>手机号</span>
+              <span>{{ txp('profile_field_phone') }}</span>
               <input v-model="merchantProfileForm.phone" type="text" class="merchant-input" autocomplete="tel" />
             </label>
             <label class="merchant-field">
-              <span>所在城市</span>
+              <span>{{ txp('profile_field_city') }}</span>
               <input v-model="merchantProfileForm.city" type="text" class="merchant-input" autocomplete="address-level2" />
             </label>
             <label class="merchant-field">
-              <span>新密码</span>
+              <span>{{ txp('profile_field_new_pw') }}</span>
               <input
                 v-model="merchantProfileForm.password"
                 type="password"
                 class="merchant-input"
                 autocomplete="new-password"
-                placeholder="不修改请留空"
+                :placeholder="txp('profile_pw_placeholder')"
               />
             </label>
             <div class="merchant-edit-actions">
               <button type="submit" class="btn primary" :disabled="merchantProfileSubmitting">
-                {{ merchantProfileSubmitting ? '保存中…' : '保存修改' }}
+                {{ merchantProfileSubmitting ? txp('profile_saving') : txp('profile_save_btn') }}
               </button>
             </div>
           </form>
         </section>
 
-        <section v-if="role === 'merchant' && merchantActiveTab === '账户概览'" class="amazon-panel merchant-apply-entry">
-          <h3>申请上架</h3>
-          <p class="merchant-edit-hint">填写商品资料并提交审核，请在专用页面完成操作。</p>
+        <section v-if="role === 'merchant' && merchantActiveTab === M_OVER" class="amazon-panel merchant-apply-entry">
+          <h3>{{ txp('profile_apply_shelf_title') }}</h3>
+          <p class="merchant-edit-hint">{{ txp('profile_apply_shelf_hint') }}</p>
           <button type="button" class="btn primary merchant-apply-btn" @click="router.push({ name: 'merchant-apply-goods' })">
-            前往申请上架
+            {{ txp('profile_apply_shelf_btn') }}
           </button>
         </section>
 
-        <section v-if="role === 'merchant' && merchantActiveTab === '账户概览'" class="amazon-panel merchant-off-shelf-entry">
-          <h3>下架申请</h3>
-          <p class="merchant-edit-hint">输入商品ID提交下架申请，提交后请在时效内完成支付。</p>
+        <section v-if="role === 'merchant' && merchantActiveTab === M_OVER" class="amazon-panel merchant-off-shelf-entry">
+          <h3>{{ txp('profile_off_shelf_title') }}</h3>
+          <p class="merchant-edit-hint">{{ txp('profile_off_shelf_hint') }}</p>
           <p v-if="offShelfTip" class="merchant-edit-msg">{{ offShelfTip }}</p>
           <p v-if="offShelfError" class="merchant-edit-msg error">{{ offShelfError }}</p>
           <form class="merchant-edit-form merchant-off-shelf-form" @submit.prevent="submitOffShelfApply">
             <label class="merchant-field">
-              <span>商品ID</span>
+              <span>{{ txp('profile_field_goods_id') }}</span>
               <input
                 v-model="offShelfGoodsId"
                 type="text"
                 class="merchant-input"
                 autocomplete="off"
-                placeholder="请输入需要下架的商品ID"
+                :placeholder="txp('profile_off_shelf_ph')"
               />
             </label>
             <div class="merchant-edit-actions">
               <button type="submit" class="btn primary" :disabled="offShelfSubmitting">
-                {{ offShelfSubmitting ? '提交中…' : '提交下架申请' }}
+                {{ offShelfSubmitting ? txp('profile_submitting') : txp('profile_off_shelf_submit') }}
               </button>
             </div>
           </form>
         </section>
 
-        <section v-if="role === 'merchant' && merchantActiveTab === '申请列表'" class="amazon-panel">
-          <h3>申请列表</h3>
+        <section v-if="role === 'merchant' && merchantActiveTab === M_APPLY_LIST" class="amazon-panel">
+          <h3>{{ txp('profile_apply_list_title') }}</h3>
           <div class="register-filter">
             <label>
-              页码
+              {{ txp('profile_page') }}
               <input v-model.number="merchantApplyListPageNum" type="number" min="1" class="mini-input" />
             </label>
             <label>
-              条数
+              {{ txp('profile_page_size') }}
               <input v-model.number="merchantApplyListPageSize" type="number" min="1" class="mini-input" />
             </label>
-            <button class="btn ghost" @click="loadMerchantApplyList">刷新</button>
+            <button class="btn ghost" @click="loadMerchantApplyList">{{ txp('profile_refresh') }}</button>
           </div>
-          <p v-if="merchantApplyListLoading" class="panel-tip">加载中...</p>
+          <p v-if="merchantApplyListLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
           <p v-else-if="merchantApplyListError" class="panel-tip error">{{ merchantApplyListError }}</p>
-          <p v-else-if="merchantApplyList.length === 0" class="panel-tip">暂无申请记录</p>
+          <p v-else-if="merchantApplyList.length === 0" class="panel-tip">{{ txp('profile_merchant_apply_empty') }}</p>
           <div v-else class="table-wrap">
             <table class="table">
               <thead>
                 <tr>
-                  <th>申请ID</th>
-                  <th>商品名</th>
-                  <th>Mall审核</th>
-                  <th>Logistic审核</th>
-                  <th>支付状态</th>
-                  <th>操作</th>
+                  <th>{{ txp('profile_apply_id') }}</th>
+                  <th>{{ txp('profile_goods_name') }}</th>
+                  <th>{{ txp('profile_col_mall_audit') }}</th>
+                  <th>{{ txp('profile_col_logistic_audit') }}</th>
+                  <th>{{ txp('profile_col_pay_status') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1218,9 +1268,9 @@ watch(
                   <td>{{ logisticGoodsApplyStatusText(row.logisticStatus) }}</td>
                   <td>{{ payStatusText(row.isPay) }}</td>
                   <td class="op-cell">
-                    <button v-if="canPayApply(row)" class="op-btn pass" @click="goPayApply(row)">前往支付</button>
-                    <button v-else-if="canViewLogistic(row)" class="op-btn info" @click="viewLogistic(row)">查看物流</button>
-                    <span v-else class="reviewed-tag">-</span>
+                    <button v-if="canPayApply(row)" class="op-btn pass" @click="goPayApply(row)">{{ txp('profile_go_pay') }}</button>
+                    <button v-else-if="canViewLogistic(row)" class="op-btn info" @click="viewLogistic(row)">{{ txp('profile_view_logistic') }}</button>
+                    <span v-else class="reviewed-tag">{{ txp('profile_empty_dash') }}</span>
                   </td>
                 </tr>
               </tbody>
@@ -1228,46 +1278,46 @@ watch(
           </div>
         </section>
 
-        <section v-if="role === 'merchant' && merchantActiveTab === '我的商品'" class="amazon-panel">
-          <h3>我的商品</h3>
+        <section v-if="role === 'merchant' && merchantActiveTab === M_MY_GOODS" class="amazon-panel">
+          <h3>{{ txp('profile_my_goods_title') }}</h3>
           <div class="register-filter">
             <label>
-              页码
+              {{ txp('profile_page') }}
               <input v-model.number="merchantGoodsPageNum" type="number" min="1" class="mini-input" />
             </label>
             <label>
-              条数
+              {{ txp('profile_page_size') }}
               <input v-model.number="merchantGoodsPageSize" type="number" min="1" class="mini-input" />
             </label>
-            <button class="btn ghost" @click="loadMerchantGoodsList">刷新</button>
+            <button class="btn ghost" @click="loadMerchantGoodsList">{{ txp('profile_refresh') }}</button>
           </div>
-          <p v-if="merchantGoodsListLoading" class="panel-tip">加载中...</p>
+          <p v-if="merchantGoodsListLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
           <p v-else-if="merchantGoodsListError" class="panel-tip error">{{ merchantGoodsListError }}</p>
-          <p v-else-if="merchantGoodsList.length === 0" class="panel-tip">暂无商品记录</p>
+          <p v-else-if="merchantGoodsList.length === 0" class="panel-tip">{{ txp('profile_merchant_goods_empty') }}</p>
           <div v-else class="table-wrap">
             <table class="table">
               <thead>
                 <tr>
-                  <th>商品ID</th>
-                  <th>商品名</th>
-                  <th>SKU编码</th>
-                  <th>价格</th>
-                  <th>分类</th>
-                  <th>状态</th>
-                  <th>操作</th>
+                  <th>{{ txp('profile_goods_id_col') }}</th>
+                  <th>{{ txp('profile_goods_name') }}</th>
+                  <th>{{ txp('profile_sku_code') }}</th>
+                  <th>{{ txp('profile_price') }}</th>
+                  <th>{{ txp('profile_col_category') }}</th>
+                  <th>{{ txp('profile_status') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-for="row in merchantGoodsList" :key="row.id || row.goodsId">
-                  <td>{{ row.goodsId || '-' }}</td>
-                  <td>{{ row.skuName || '-' }}</td>
-                  <td>{{ row.skuCode || '-' }}</td>
-                  <td>{{ row.price ?? '-' }}</td>
+                  <td>{{ row.goodsId || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.skuName || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.skuCode || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.price ?? txp('profile_empty_dash') }}</td>
                   <td>{{ categoryText(row.category) }}</td>
                   <td>{{ portalGoodsStatusText(row.status) }}</td>
                   <td class="op-cell">
-                    <button v-if="canViewGoodsDetail(row)" class="op-btn info" @click="goGoodsDetail(row)">前往详情</button>
-                    <span v-else class="reviewed-tag">-</span>
+                    <button v-if="canViewGoodsDetail(row)" class="op-btn info" @click="goGoodsDetail(row)">{{ txp('profile_go_detail') }}</button>
+                    <span v-else class="reviewed-tag">{{ txp('profile_empty_dash') }}</span>
                   </td>
                 </tr>
               </tbody>
@@ -1278,51 +1328,54 @@ watch(
     </div>
 
     <section v-else class="forbidden-card">
-      <h1>当前角色暂无个人中心模板</h1>
-      <p>当前登录角色为：{{ roleLabel }}。如需使用请切换为已支持角色。</p>
+      <h1>{{ txp('profile_unsupported_title') }}</h1>
+      <p>{{ txp('profile_unsupported_desc') }}{{ roleLabel }}</p>
       <div class="action-row">
-        <button class="btn ghost" @click="router.push({ name: 'home' })">返回首页</button>
-        <button class="btn primary" @click="goLogin">切换账号</button>
+        <MallLanguageDropdown />
+        <button class="btn ghost" @click="router.push({ name: 'home' })">{{ txp('profile_back_home') }}</button>
+        <button class="btn primary" @click="goLogin">{{ txp('profile_switch_account') }}</button>
       </div>
     </section>
 
     <div v-if="editDialogVisible" class="dialog-mask" @click.self="editDialogVisible = false">
       <div class="dialog-card">
-        <h3 class="dialog-title">更新用户</h3>
+        <h3 class="dialog-title">{{ txp('profile_update_user') }}</h3>
         <div class="dialog-grid">
-          <label>用户ID<input v-model="editForm.userId" class="dialog-input" disabled /></label>
-          <label>用户名<input v-model="editForm.username" class="dialog-input" /></label>
-          <label>昵称<input v-model="editForm.nickname" class="dialog-input" /></label>
-          <label>身份
+          <label>{{ txp('profile_user_id_col') }}<input v-model="editForm.userId" class="dialog-input" disabled /></label>
+          <label>{{ txp('profile_col_username') }}<input v-model="editForm.username" class="dialog-input" /></label>
+          <label>{{ txp('profile_col_nickname') }}<input v-model="editForm.nickname" class="dialog-input" /></label>
+          <label>{{ txp('profile_super_query_type') }}
             <select v-model="editForm.userType" class="dialog-input">
-              <option value="1">超级管理员</option>
-              <option value="2">管理员</option>
-              <option value="3">商家</option>
-              <option value="4">普通用户</option>
-              <option value="5">审核员</option>
+              <option value="1">{{ txp('ut_super') }}</option>
+              <option value="2">{{ txp('ut_manager') }}</option>
+              <option value="3">{{ txp('ut_merchant') }}</option>
+              <option value="4">{{ txp('ut_user') }}</option>
+              <option value="5">{{ txp('ut_reviewer') }}</option>
             </select>
           </label>
-          <label>状态
+          <label>{{ txp('profile_status') }}
             <select v-model="editForm.status" class="dialog-input">
-              <option value="1">启用</option>
-              <option value="0">禁用</option>
+              <option value="1">{{ txp('user_enabled') }}</option>
+              <option value="0">{{ txp('user_disabled') }}</option>
             </select>
           </label>
         </div>
         <div class="dialog-actions">
-          <button class="btn ghost" @click="editDialogVisible = false">取消</button>
-          <button class="btn primary" :disabled="editSubmitting" @click="submitEdit">保存</button>
+          <button class="btn ghost" @click="editDialogVisible = false">{{ txp('profile_cancel') }}</button>
+          <button class="btn primary" :disabled="editSubmitting" @click="submitEdit">{{ txp('profile_save') }}</button>
         </div>
       </div>
     </div>
 
     <div v-if="deleteDialogVisible" class="dialog-mask" @click.self="deleteDialogVisible = false">
       <div class="dialog-card delete-card">
-        <h3 class="dialog-title">确认删除用户</h3>
-        <p class="dialog-text">删除后无法恢复，请确认是否删除用户：<strong>{{ deleteTarget?.username }}</strong>（{{ deleteTarget?.userId }}）</p>
+        <h3 class="dialog-title">{{ txp('profile_delete_user') }}</h3>
+        <p class="dialog-text">
+          {{ txp('profile_delete_confirm') }}<strong>{{ deleteTarget?.username }}</strong>（{{ deleteTarget?.userId }}）
+        </p>
         <div class="dialog-actions">
-          <button class="btn ghost" @click="deleteDialogVisible = false">取消</button>
-          <button class="btn danger" :disabled="deleteSubmitting" @click="confirmDelete">确认删除</button>
+          <button class="btn ghost" @click="deleteDialogVisible = false">{{ txp('profile_cancel') }}</button>
+          <button class="btn danger" :disabled="deleteSubmitting" @click="confirmDelete">{{ txp('profile_confirm_delete') }}</button>
         </div>
       </div>
     </div>
@@ -1357,6 +1410,8 @@ watch(
 
 .action-row {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 20px;
 }
@@ -1444,6 +1499,8 @@ watch(
 
 .head-actions {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -1657,6 +1714,13 @@ select.mini-input {
 
 .side-btn {
   margin-top: 16px;
+}
+
+/* 与下方 merchant 侧栏 Tab 同宽（侧栏内纵向 flex 子项会 stretch，此按钮在 tabs 容器外需单独拉满） */
+.amazon-side > .side-btn {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .amazon-main {
