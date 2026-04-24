@@ -1,20 +1,12 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import ProductCard from './ProductCard.vue'
 import HeroCarousel from './HeroCarousel.vue'
-import { searchGoods } from '@/api/search'
+import { fetchHotGoods } from '@/api/portal'
 
-const props = defineProps({
-  searchQuery: {
-    type: String,
-    default: '',
-  },
-})
-
-
-const searching = ref(false)
-const searchError = ref('')
-const searchResults = ref([])
+const hotLoading = ref(false)
+const hotError = ref('')
+const hotGoods = ref([])
 
 function toCard(item, i) {
   const picture = String(item?.picture || '').trim()
@@ -33,55 +25,42 @@ function toCard(item, i) {
   }
 }
 
-async function fetchSearchResults(query) {
-  const q = (query || '').trim()
-  if (!q) {
-    searchResults.value = []
-    searchError.value = ''
-    return
-  }
-  searching.value = true
-  searchError.value = ''
+async function fetchHomeHotGoods() {
+  hotLoading.value = true
+  hotError.value = ''
   try {
-    const { ok, data } = await searchGoods({ query: q, page: 0, size: 12 })
+    const { ok, data } = await fetchHotGoods({ pageNum: 1, pageSize: 12 })
     if (!ok || data?.code !== 200) {
-      searchError.value = data?.message || '搜索服务不可用，请稍后重试'
-      searchResults.value = []
+      hotError.value = data?.message || '热门商品加载失败'
+      hotGoods.value = []
       return
     }
-    const items = Array.isArray(data?.data?.items) ? data.data.items : []
-    searchResults.value = items.map(toCard)
+    const items = Array.isArray(data?.data) ? data.data : []
+    hotGoods.value = items.map(toCard)
   } catch {
-    searchError.value = '搜索请求失败，请确认 gl-search 已启动'
-    searchResults.value = []
+    hotError.value = '热门商品请求失败，请确认 mall-portal 已启动'
+    hotGoods.value = []
   } finally {
-    searching.value = false
+    hotLoading.value = false
   }
 }
 
-watch(
-  () => props.searchQuery,
-  (value) => {
-    fetchSearchResults(value)
-  },
-  { immediate: true },
-)
+fetchHomeHotGoods()
 </script>
 
 <template>
   <main class="home">
     <HeroCarousel />
 
-    <section v-if="searchQuery" class="block container">
+    <section class="block container">
       <div class="block-head">
-        <h2>搜索结果</h2>
-        <span class="result-tip">关键词：{{ searchQuery }}</span>
+        <h2>热门商品</h2>
       </div>
-      <p v-if="searching" class="status">正在搜索商品...</p>
-      <p v-else-if="searchError" class="status error">{{ searchError }}</p>
-      <p v-else-if="searchResults.length === 0" class="status">暂无匹配商品</p>
+      <p v-if="hotLoading" class="status">正在加载热门商品...</p>
+      <p v-else-if="hotError" class="status error">{{ hotError }}</p>
+      <p v-else-if="hotGoods.length === 0" class="status">暂无热门商品</p>
       <div v-else class="grid">
-        <ProductCard v-for="(p, i) in searchResults" :key="'s-' + i" v-bind="p" />
+        <ProductCard v-for="(p, i) in hotGoods" :key="'h-' + i" v-bind="p" />
       </div>
     </section>
 
@@ -141,21 +120,6 @@ watch(
   margin: 0;
   font-size: 1.25rem;
   font-weight: 700;
-}
-
-.see-all {
-  font-size: 0.88rem;
-  font-weight: 600;
-  color: var(--mall-orange);
-}
-
-.see-all:hover {
-  text-decoration: underline;
-}
-
-.result-tip {
-  font-size: 0.88rem;
-  color: var(--mall-text-muted);
 }
 
 .status {

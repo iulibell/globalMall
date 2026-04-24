@@ -3,9 +3,9 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 /** 仅图片展示；文案请做进图片本身，或后续接运营配置的图链 */
 const slides = [
-  { image: '/carousel/banner-1.svg', href: '#', label: '活动图 1' },
-  { image: '/carousel/banner-2.svg', href: '#', label: '活动图 2' },
-  { image: '/carousel/banner-3.svg', href: '#', label: '活动图 3' },
+  { image: '/61DCYDCQuwL._SX3000_.jpg', label: '活动图 1' },
+  { image: '/61MaTtH8HQL._SX3000_.jpg', label: '活动图 2' },
+  { image: '/71oTLED8qoL._SX3000_.jpg', label: '活动图 3' },
 ]
 
 const n = slides.length
@@ -74,9 +74,7 @@ function onNav(delta) {
           :style="{ flex: slideFlex }"
           :aria-hidden="i !== current"
         >
-          <a class="slide-link" :href="s.href" :aria-label="s.label" :tabindex="i === current ? 0 : -1">
-            <img class="slide-img" :src="s.image" alt="" width="1600" height="420" decoding="async" />
-          </a>
+          <img class="slide-img" :src="s.image" :alt="s.label" width="1600" height="420" decoding="async" />
         </div>
       </div>
     </div>
@@ -133,19 +131,8 @@ function onNav(delta) {
   position: relative;
   flex-grow: 0;
   flex-shrink: 0;
-  min-height: min(42vw, 420px);
-  max-height: 420px;
-}
-
-.slide-link {
-  position: absolute;
-  inset: 0;
-  display: block;
-  outline: none;
-}
-
-.slide-link:focus-visible {
-  box-shadow: inset 0 0 0 3px var(--mall-orange);
+  min-height: min(52vw, 520px);
+  max-height: 520px;
 }
 
 .slide-img {
@@ -153,8 +140,9 @@ function onNav(delta) {
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
+  background: var(--mall-black);
   pointer-events: none;
 }
 

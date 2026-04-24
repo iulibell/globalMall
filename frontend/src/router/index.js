@@ -6,6 +6,7 @@ import ProfileView from '@/views/ProfileView.vue'
 import GoodsDetailView from '@/views/GoodsDetailView.vue'
 import MerchantApplyGoodsView from '@/views/MerchantApplyGoodsView.vue'
 import MerchantApplyPayView from '@/views/MerchantApplyPayView.vue'
+import SearchResultsView from '@/views/SearchResultsView.vue'
 
 export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -20,6 +21,12 @@ export const router = createRouter({
       path: '/goods/:goodsId',
       name: 'goods-detail',
       component: GoodsDetailView,
+      meta: { layout: 'mall' },
+    },
+    {
+      path: '/search',
+      name: 'search',
+      component: SearchResultsView,
       meta: { layout: 'mall' },
     },
     {

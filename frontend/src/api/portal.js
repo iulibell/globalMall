@@ -39,6 +39,20 @@ export async function fetchGoodsDetail(goodsId) {
   return { ok: res.ok, status: res.status, data }
 }
 
+export async function fetchHotGoods(params = {}) {
+  const res = await fetch(buildUrl('/portal/hotGoods', params), {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
 /** 商家修改资料（需 merchant 登录态） */
 export async function merchantUpdateInfo(payload) {
   const body = { ...payload }

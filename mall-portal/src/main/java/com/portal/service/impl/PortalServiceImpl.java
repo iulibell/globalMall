@@ -4,6 +4,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.common.constant.PortalConstant;
+import com.common.constant.RedisConstant;
+import com.common.service.RedisService;
 import com.portal.dao.PortalGoodsDao;
 import com.portal.dao.PortalOffShelfDao;
 import com.portal.dto.PortalGoodsDto;
@@ -11,14 +14,16 @@ import com.portal.dto.PortalGoodsNeededDto;
 import com.portal.entity.PortalGoods;
 import com.portal.entity.PortalOffShelf;
 import com.portal.service.PortalService;
-import com.portal.service.client.AdminServiceClient;
-import com.portal.service.client.WmsServiceClient;
 import jakarta.annotation.Resource;
+import org.redisson.Redisson;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Service
 public class PortalServiceImpl implements PortalService {
@@ -27,6 +32,10 @@ public class PortalServiceImpl implements PortalService {
     private PortalGoodsDao portalGoodsDao;
     @Resource
     private PortalOffShelfDao portalOffShelfDao;
+    @Resource
+    private RedisService redisService;
+    @Resource
+    private Redisson redisson;
 
     @Override
     public void goodsOnShelf(PortalGoodsNeededDto portalGoodsNeededDto) {
@@ -75,5 +84,35 @@ public class PortalServiceImpl implements PortalService {
         BeanUtils.copyProperties(portalGoodsDao.selectOne(new LambdaQueryWrapper<PortalGoods>()
                 .eq(PortalGoods::getGoodsId,goodsId)),portalGoodsDto);
         return portalGoodsDto;
+    }
+
+    @Override
+    public List<PortalGoodsDto> getHotPortalGoods(int pageNum, int pageSize) {
+        IPage<PortalGoods> page = new Page<>(pageNum, pageSize);
+        portalGoodsDao.selectPage(page, new LambdaQueryWrapper<PortalGoods>()
+                .eq(PortalGoods::getStatus, (short) 1)
+                .ge(PortalGoods::getVisitVolume, PortalConstant.HOT_GOODS_VISIT_THRESHOLD)
+                .orderByDesc(PortalGoods::getVisitVolume)
+                .orderByDesc(PortalGoods::getUpdateTime));
+        return page.getRecords().stream().map(portalGoods -> {
+            String cacheKey = RedisConstant.HOT_GOODS_PREFIX + portalGoods.getGoodsId();
+            Object cached = redisService.get(cacheKey);
+            if (cached instanceof PortalGoodsDto cachedDto) {
+                return cachedDto;
+            }
+            PortalGoodsDto portalGoodsDto = new PortalGoodsDto();
+            BeanUtils.copyProperties(portalGoods, portalGoodsDto);
+            redisService.set(cacheKey, portalGoodsDto, RedisConstant.HOT_GOODS_EXPIRE, TimeUnit.HOURS);
+            return portalGoodsDto;
+        }).toList();
+    }
+
+    @Override
+    public void clickGoods(String goodsId) {
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        redisson.getAtomicLong(RedisConstant.VISIT_COUNT_PREFIX
+                + date
+                + ":"
+                + goodsId).incrementAndGet();
     }
 }

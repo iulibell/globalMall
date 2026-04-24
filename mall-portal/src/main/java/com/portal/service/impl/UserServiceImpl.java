@@ -2,6 +2,7 @@ package com.portal.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
 import com.common.api.CommonResult;
+import com.common.constant.RedisConstant;
 import com.common.exception.Assert;
 import com.common.api.ResultCode;
 import com.common.constant.PortalConstant;
@@ -10,9 +11,13 @@ import com.portal.service.OmsCartService;
 import com.portal.service.UserService;
 import com.portal.service.client.OmsServiceClient;
 import jakarta.annotation.Resource;
+import org.redisson.Redisson;
+import org.redisson.api.RLongAdder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -20,6 +25,8 @@ public class UserServiceImpl implements UserService {
     private OmsServiceClient omsServiceClient;
     @Resource
     private OmsCartService omsCartService;
+    @Resource
+    private Redisson redisson;
 
     @Override
     public CommonResult<?> addOrder(OmsOrderDto omsOrderDto) {
@@ -80,17 +87,13 @@ public class UserServiceImpl implements UserService {
     }
 
     private <T> CommonResult<T> executeWithRetry(RemoteCall<T> remoteCall, String failMessage) {
-        Exception lastException = null;
         for (int i = 0; i < PortalConstant.OMS_RETRY_TIMES; i++) {
             try {
                 return remoteCall.call();
-            } catch (Exception e) {
-                lastException = e;
+            } catch (Exception ignored) {
             }
         }
-        if (lastException != null) {
-            Assert.fail(failMessage);
-        }
+        Assert.fail(failMessage);
         Assert.fail(failMessage);
         return null;
     }

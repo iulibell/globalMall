@@ -40,6 +40,12 @@ public class PortalController {
         return portalService.getPortalGoodsById(goodsId);
     }
 
+    @GetMapping("/hotGoods")
+    public CommonResult<List<PortalGoodsDto>> getHotPortalGoods(@RequestParam(defaultValue = "1") int pageNum,
+                                                                 @RequestParam(defaultValue = "10") int pageSize) {
+        return CommonResult.success(portalService.getHotPortalGoods(pageNum, pageSize));
+    }
+
     @PostMapping("/sys/markOffShelfCompleted")
     public CommonResult<Boolean> markOffShelfCompleted(@RequestParam Long offShelfId){
         return CommonResult.success(portalService.markOffShelfCompleted(offShelfId));
@@ -47,6 +53,7 @@ public class PortalController {
 
     @GetMapping("/getGoodsDetail")
     public CommonResult<?> getGoodsDetail(@RequestParam String goodsId){
+        portalService.clickGoods(goodsId);
         return CommonResult.success(portalService.getGoodsDetail(goodsId));
     }
 }

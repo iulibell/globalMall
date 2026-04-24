@@ -14,7 +14,6 @@ import org.springframework.data.elasticsearch.repository.config.EnableElasticsea
 @EnableDiscoveryClient
 @EnableElasticsearchRepositories(basePackages = "com.search.repository")
 public class SearchApplication {
-
     public static void main(String[] args) {
         SpringApplication.run(SearchApplication.class, args);
     }

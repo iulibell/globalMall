@@ -27,4 +27,12 @@ public class RedisConstant {
     /** 热门商品(浏览超过1w)初始化*/
     public static final String HOT_GOODS_PREFIX = "hot:goods:";
     public static final int HOT_GOODS_EXPIRE = 12;
+
+    /** 统计商品浏览次数*/
+    public static final String VISIT_COUNT_PREFIX = "visit:count:";
+    public static final String VISIT_COUNT_LOCK = "visit:count:lock";
+
+    /** 浏览锁的重试时间*/
+    public static final int COUNT_LOCK_WAIT_TIME = 5;
+    public static final int COUNT_LOCK_LEASE_TIME = 10;
 }

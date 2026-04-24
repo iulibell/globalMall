@@ -1,16 +1,19 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import MallHeader from './components/MallHeader.vue'
 
 const route = useRoute()
+const router = useRouter()
 const lastQuery = ref('')
 
 const showMallHeader = computed(() => route.meta.layout === 'mall')
-const showSearchToast = computed(() => route.name === 'home' && lastQuery.value)
+const showSearchToast = computed(() => route.name === 'search' && lastQuery.value)
 
 function onSearch(q) {
-  lastQuery.value = (q || '').trim()
+  const query = (q || '').trim()
+  lastQuery.value = query
+  router.push({ name: 'search', query: query ? { q: query } : {} })
 }
 </script>
 
@@ -20,12 +23,7 @@ function onSearch(q) {
     <p v-if="showSearchToast" class="search-toast container" role="status">
       正在展示与「<strong>{{ lastQuery }}</strong>」相关的搜索结果。
     </p>
-    <router-view v-slot="{ Component, route: currentRoute }">
-      <component
-        :is="Component"
-        v-bind="currentRoute.name === 'home' ? { searchQuery: lastQuery } : {}"
-      />
-    </router-view>
+    <router-view />
   </div>
 </template>
 

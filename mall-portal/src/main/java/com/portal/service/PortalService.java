@@ -45,4 +45,18 @@ public interface PortalService {
      * @return 单个商品
      */
     PortalGoodsDto getGoodsDetail(String goodsId);
+
+    /**
+     * 获取热门商品列表
+     * @param pageNum 页数
+     * @param pageSize 页大小
+     * @return 热门商品列表
+     */
+    List<PortalGoodsDto> getHotPortalGoods(int pageNum, int pageSize);
+
+    /**
+     * 点击商品打开详细页后为商品添加浏览次数
+     * @param goodsId 商品id
+     */
+    void clickGoods(String goodsId);
 }
