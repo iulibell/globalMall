@@ -1,6 +1,7 @@
 package com.portal.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -9,13 +10,15 @@ import java.math.BigDecimal;
 public class PortalGoodsApplicationDto {
     @NotBlank(message = "商家id不能为空")
     private String userId;
+    /** 与 {@link #userId} 一致时由服务端默认填充；传给 mall-admin 写入 goods_application.merchant_id */
+    private String merchantId;
     @NotBlank(message = "上架申请id不能为空")
     private String applyId;
     @NotBlank(message = "商品名称不能为空")
     private String skuName;
     @NotBlank(message = "商家手机号不能为空")
     private String merchantPhone;
-    @NotBlank(message = "价格不能为空")
+    @NotNull(message = "价格不能为空")
     private BigDecimal price;
     @NotBlank(message = "商品图片不能为空")
     private String picture;
@@ -23,7 +26,13 @@ public class PortalGoodsApplicationDto {
     private String city;
     @NotBlank(message = "仓库所属城市不能为空")
     private String warehouseCity;
+    @NotNull(message = "申请数量不能为空")
+    private Integer applyQuantity;
     private Short isPay;
+    private String transportOrderId;
+    private Short mallStatus;
+    private Short logisticStatus;
     private String description;
     private String remark;
+    private BigDecimal fee;
 }

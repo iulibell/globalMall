@@ -35,6 +35,7 @@ public class PortalServiceImpl implements PortalService {
                 .set(PortalGoods::getLocationId,portalGoodsNeededDto.getLocationId())
                 .set(PortalGoods::getSkuCode,portalGoodsNeededDto.getSkuCode())
                 .set(PortalGoods::getWarehouseId,portalGoodsNeededDto.getWarehouseId())
+                .set(PortalGoods::getCategory, portalGoodsNeededDto.getCategory())
                 .set(PortalGoods::getStatus,(short)1));
     }
 
@@ -66,5 +67,13 @@ public class PortalServiceImpl implements PortalService {
                 .set(PortalOffShelf::getStatus, (short) 3)
                 .set(PortalOffShelf::getUpdateTime, new Date()));
         return rows > 0;
+    }
+
+    @Override
+    public PortalGoodsDto getGoodsDetail(String goodsId) {
+        PortalGoodsDto portalGoodsDto = new PortalGoodsDto();
+        BeanUtils.copyProperties(portalGoodsDao.selectOne(new LambdaQueryWrapper<PortalGoods>()
+                .eq(PortalGoods::getGoodsId,goodsId)),portalGoodsDto);
+        return portalGoodsDto;
     }
 }

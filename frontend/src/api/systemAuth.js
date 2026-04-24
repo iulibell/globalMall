@@ -3,7 +3,9 @@
  * 开发环境由 Vite 代理到 127.0.0.1:8205；生产可改为网关地址并配置 CORS。
  */
 async function postJson(path, body) {
-  const res = await fetch(path, {
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const url = new URL(normalizedPath, window.location.origin).toString()
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

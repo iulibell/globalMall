@@ -1,5 +1,6 @@
 package com.admin.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.admin.dao.DictionaryDao;
 import com.admin.dto.DictionaryDto;
 import com.admin.dto.DictionaryOperationDto;
@@ -23,6 +24,8 @@ public class DictionaryServiceImpl implements DictionaryService {
 
     @Override
     public List<DictionaryDto> getDictionary(int pageNum, int pageSize) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("manager");
         IPage<Dictionary> page = new Page<>(pageNum,pageSize);
         dictionaryDao.selectPage(page,null);
         return page.convert(dictionary -> {
@@ -34,6 +37,8 @@ public class DictionaryServiceImpl implements DictionaryService {
 
     @Override
     public void addDictionary(List<DictionaryDto> dictionaryDto) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("manager");
         for (DictionaryDto dto : dictionaryDto) {
             Dictionary entity = new Dictionary();
             BeanUtils.copyProperties(dto, entity);
@@ -43,6 +48,8 @@ public class DictionaryServiceImpl implements DictionaryService {
 
     @Override
     public List<DictionaryDto> getDictionaryList(String dictType) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("manager");
         List<Dictionary> list = dictionaryDao.selectList(
                 new LambdaQueryWrapper<Dictionary>()
                         .eq(Dictionary::getDictType, dictType)
@@ -56,6 +63,8 @@ public class DictionaryServiceImpl implements DictionaryService {
 
     @Override
     public void updateDictionary(DictionaryOperationDto dictionaryOperationDto) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("manager");
         LambdaQueryWrapper<Dictionary> w = new LambdaQueryWrapper<Dictionary>()
                 .eq(Dictionary::getDictType, dictionaryOperationDto.getDictType())
                 .eq(Dictionary::getDictValue, dictionaryOperationDto.getDictValue());
@@ -72,6 +81,8 @@ public class DictionaryServiceImpl implements DictionaryService {
 
     @Override
     public void deleteDictionary(DictionaryOperationDto dictionaryOperationDto) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("manager");
         LambdaQueryWrapper<Dictionary> w = new LambdaQueryWrapper<Dictionary>()
                 .eq(Dictionary::getDictType, dictionaryOperationDto.getDictType())
                 .eq(Dictionary::getDictValue, dictionaryOperationDto.getDictValue());

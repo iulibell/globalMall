@@ -13,6 +13,7 @@ public class PortalGoodsDto {
     private String goodsId;
     @NotBlank(message = "商品名称不能为空")
     private String skuName;
+    private String skuCode;
     @NotBlank(message = "商品图片不能为空")
     private String picture;
     @NotBlank(message = "种类不能为空")
@@ -21,5 +22,6 @@ public class PortalGoodsDto {
     private BigDecimal price;
     @NotBlank(message = "商品类型不能为空")
     private String type;
+    private Short status;
     private String description;
 }

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { register, sendRegisterCaptcha } from '@/api/systemAuth'
@@ -14,6 +14,7 @@ const captchaLoading = ref(false)
 const countdown = ref(0)
 const errorMsg = ref('')
 const infoMsg = ref('')
+const registerSuccess = ref(false)
 
 const userTypes = [
   { value: '1', label: '超级管理员' },
@@ -65,6 +66,7 @@ async function onSendCaptcha() {
 async function onSubmit() {
   errorMsg.value = ''
   infoMsg.value = ''
+  registerSuccess.value = false
   submitting.value = true
   try {
     const { data } = await register({
@@ -78,6 +80,7 @@ async function onSubmit() {
     if (data?.code === 200) {
       const msg = typeof data.data === 'string' ? data.data : data.message
       infoMsg.value = msg || '提交成功'
+      registerSuccess.value = true
       return
     }
     errorMsg.value = data?.message || '注册失败'
@@ -139,6 +142,11 @@ async function onSubmit() {
 
         <p v-if="errorMsg" class="error" role="alert">{{ errorMsg }}</p>
         <p v-if="infoMsg" class="info" role="status">{{ infoMsg }}</p>
+
+        <div v-if="registerSuccess" class="success-actions">
+          <RouterLink to="/" class="success-btn secondary">回到首页</RouterLink>
+          <RouterLink to="/login" class="success-btn primary">去登录</RouterLink>
+        </div>
 
         <button type="submit" class="submit" :disabled="submitting">
           {{ submitting ? '提交中…' : '提交注册申请' }}
@@ -271,6 +279,14 @@ async function onSubmit() {
 
 .select {
   cursor: pointer;
+  padding-right: 42px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23f4f4f5' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 12px 12px;
+  background-position: right 16px center;
 }
 
 .captcha-btn {
@@ -307,6 +323,35 @@ async function onSubmit() {
   margin: 0;
   font-size: 0.85rem;
   color: #86efac;
+}
+
+.success-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.success-btn {
+  flex: 1;
+  height: 40px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.86rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.success-btn.primary {
+  color: var(--mall-black);
+  background: linear-gradient(180deg, var(--mall-orange-bright), var(--mall-orange));
+}
+
+.success-btn.secondary {
+  color: var(--mall-text);
+  border: 1px solid var(--mall-border);
+  background: var(--mall-surface);
 }
 
 .submit {

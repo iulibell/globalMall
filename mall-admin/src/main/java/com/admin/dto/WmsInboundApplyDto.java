@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 
 @Data
 public class WmsInboundApplyDto {
+    private String goodsId;
     @NotBlank(message = "申请入库id不能为空")
     private String applyId;
     @NotBlank(message = "商家id不能为空")

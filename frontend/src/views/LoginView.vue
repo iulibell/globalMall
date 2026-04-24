@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref } from 'vue'
 import { useRouter, RouterLink } from 'vue-router'
 import { login } from '@/api/systemAuth'
@@ -32,6 +32,22 @@ async function onSubmit() {
       localStorage.setItem('satoken', data.data.token)
       if (data.data.tokenHead) {
         localStorage.setItem('tokenHead', data.data.tokenHead)
+      }
+      localStorage.setItem('role', data.data.role || requiredRoleKey.value)
+      localStorage.setItem('username', data.data.username || username.value.trim())
+      localStorage.setItem('nickname', data.data.nickname || '')
+      if (data.data.userId) {
+        localStorage.setItem('userId', data.data.userId)
+      }
+      if (data.data.phone != null && String(data.data.phone).trim() !== '') {
+        localStorage.setItem('phone', String(data.data.phone).trim())
+      } else {
+        localStorage.removeItem('phone')
+      }
+      if (data.data.city != null && String(data.data.city).trim() !== '') {
+        localStorage.setItem('city', String(data.data.city).trim())
+      } else {
+        localStorage.removeItem('city')
       }
       await router.push({ name: 'home' })
       return
@@ -190,6 +206,14 @@ async function onSubmit() {
 
 .select {
   cursor: pointer;
+  padding-right: 42px;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23f4f4f5' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 12px 12px;
+  background-position: right 16px center;
 }
 
 .error {

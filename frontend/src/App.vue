@@ -18,9 +18,14 @@ function onSearch(q) {
   <div class="app-shell">
     <MallHeader v-if="showMallHeader" @search="onSearch" />
     <p v-if="showSearchToast" class="search-toast container" role="status">
-      正在展示与「<strong>{{ lastQuery }}</strong>」相关的搜索结果（演示，后续可对接门户接口）。
+      正在展示与「<strong>{{ lastQuery }}</strong>」相关的搜索结果。
     </p>
-    <router-view />
+    <router-view v-slot="{ Component, route: currentRoute }">
+      <component
+        :is="Component"
+        v-bind="currentRoute.name === 'home' ? { searchQuery: lastQuery } : {}"
+      />
+    </router-view>
   </div>
 </template>
 

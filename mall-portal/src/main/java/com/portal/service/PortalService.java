@@ -38,4 +38,11 @@ public interface PortalService {
      * @return 本次是否更新成功
      */
     boolean markOffShelfCompleted(Long offShelfId);
+
+    /**
+     *点击商品后获取单个商品详细信息
+     * @param goodsId 商品id
+     * @return 单个商品
+     */
+    PortalGoodsDto getGoodsDetail(String goodsId);
 }

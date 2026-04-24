@@ -1,45 +1,87 @@
 <script setup>
+import { ref, watch } from 'vue'
 import ProductCard from './ProductCard.vue'
 import HeroCarousel from './HeroCarousel.vue'
+import { searchGoods } from '@/api/search'
 
-const deals = [
-  { title: '无线主动降噪耳机，续航约 30 小时，可折叠便携', price: '599.00', rating: 4.6, reviews: 12840, badge: '特价', imageTone: 'a' },
-  { title: '不锈钢保温杯 950ml，防漏杯盖，长效保温', price: '168.00', rating: 4.4, reviews: 3201, badge: '省18%', imageTone: 'b' },
-  { title: 'USB-C 七合一扩展坞，铝合金外壳，快充传输', price: '279.00', rating: 4.3, reviews: 892, badge: '特价', imageTone: 'c' },
-  { title: '机械键盘 75% 配列，段落轴体，紧凑桌面方案', price: '799.00', rating: 4.8, reviews: 562, badge: '', imageTone: 'a' },
-]
+const props = defineProps({
+  searchQuery: {
+    type: String,
+    default: '',
+  },
+})
 
-const picks = [
-  { title: '智能运动手环，血氧与睡眠监测，长续航', price: '399.00', rating: 4.2, reviews: 9102, badge: '', imageTone: 'b' },
-  { title: '陶瓷不粘锅具十件套，可进烤箱，易清洁', price: '999.00', rating: 4.5, reviews: 445, badge: '精选', imageTone: 'c' },
-  { title: '移动固态硬盘 1TB，读取约 1050MB/s', price: '699.00', rating: 4.7, reviews: 2230, badge: '', imageTone: 'a' },
-  { title: '护眼台灯，多档色温亮度可调', price: '229.00', rating: 4.1, reviews: 1203, badge: '', imageTone: 'b' },
-  { title: '旅行双肩包 40L，独立电脑仓，防泼水面料', price: '459.00', rating: 4.5, reviews: 667, badge: '', imageTone: 'c' },
-  { title: '空气净化器（适用中面积房间），HEPA H13 滤芯', price: '1299.00', rating: 4.4, reviews: 3341, badge: '', imageTone: 'a' },
-]
+
+const searching = ref(false)
+const searchError = ref('')
+const searchResults = ref([])
+
+function toCard(item, i) {
+  const picture = String(item?.picture || '').trim()
+  const imageUrl = (/^https?:\/\//i.test(picture) || /^data:/i.test(picture))
+    ? picture
+    : (picture ? `/src/assets/picture/${encodeURIComponent(picture)}` : '')
+  return {
+    goodsId: item.goodsId != null ? String(item.goodsId) : '',
+    title: item.skuName || item.description || `商品 #${item.goodsId || i + 1}`,
+    price: Number(item.price || 0).toFixed(2),
+    rating: 4.2,
+    reviews: 0,
+    badge: item.type || '',
+    imageUrl,
+    imageTone: ['a', 'b', 'c'][Math.abs((item.category ?? i) % 3)],
+  }
+}
+
+async function fetchSearchResults(query) {
+  const q = (query || '').trim()
+  if (!q) {
+    searchResults.value = []
+    searchError.value = ''
+    return
+  }
+  searching.value = true
+  searchError.value = ''
+  try {
+    const { ok, data } = await searchGoods({ query: q, page: 0, size: 12 })
+    if (!ok || data?.code !== 200) {
+      searchError.value = data?.message || '搜索服务不可用，请稍后重试'
+      searchResults.value = []
+      return
+    }
+    const items = Array.isArray(data?.data?.items) ? data.data.items : []
+    searchResults.value = items.map(toCard)
+  } catch {
+    searchError.value = '搜索请求失败，请确认 gl-search 已启动'
+    searchResults.value = []
+  } finally {
+    searching.value = false
+  }
+}
+
+watch(
+  () => props.searchQuery,
+  (value) => {
+    fetchSearchResults(value)
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
   <main class="home">
     <HeroCarousel />
 
-    <section class="block container">
+    <section v-if="searchQuery" class="block container">
       <div class="block-head">
-        <h2>今日特惠</h2>
-        <a class="see-all" href="#">查看全部特惠</a>
+        <h2>搜索结果</h2>
+        <span class="result-tip">关键词：{{ searchQuery }}</span>
       </div>
-      <div class="grid">
-        <ProductCard v-for="(p, i) in deals" :key="'d-' + i" v-bind="p" />
-      </div>
-    </section>
-
-    <section class="block container">
-      <div class="block-head">
-        <h2>猜你喜欢</h2>
-        <a class="see-all" href="#">发现更多</a>
-      </div>
-      <div class="grid grid-wide">
-        <ProductCard v-for="(p, i) in picks" :key="'p-' + i" v-bind="p" />
+      <p v-if="searching" class="status">正在搜索商品...</p>
+      <p v-else-if="searchError" class="status error">{{ searchError }}</p>
+      <p v-else-if="searchResults.length === 0" class="status">暂无匹配商品</p>
+      <div v-else class="grid">
+        <ProductCard v-for="(p, i) in searchResults" :key="'s-' + i" v-bind="p" />
       </div>
     </section>
 
@@ -111,29 +153,35 @@ const picks = [
   text-decoration: underline;
 }
 
+.result-tip {
+  font-size: 0.88rem;
+  color: var(--mall-text-muted);
+}
+
+.status {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  color: var(--mall-text-muted);
+}
+
+.status.error {
+  color: #f87171;
+}
+
 .grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
 }
 
-.grid-wide {
-  grid-template-columns: repeat(3, 1fr);
-}
-
 @media (max-width: 1024px) {
   .grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .grid-wide {
     grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 640px) {
-  .grid,
-  .grid-wide {
+  .grid {
     grid-template-columns: 1fr;
   }
 }

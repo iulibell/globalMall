@@ -65,10 +65,13 @@ CREATE TABLE `goods_application` (
   `price` decimal(10,2) DEFAULT NULL,
   `picture` varchar(255) DEFAULT NULL COMMENT '商品图片',
   `description` varchar(500) DEFAULT NULL COMMENT '商品描述',
-  `status` smallint DEFAULT NULL COMMENT '状态:0->待审核(默认),1->已过审,2->未过审,3->已取消',
+  `mall_status` smallint DEFAULT NULL COMMENT '商城审核状态:0->待审核(默认),1->已通过,2->已退回,3->已取消',
+  `logistic_status` smallint DEFAULT NULL COMMENT '物流审核状态:0->待审核(默认),1->已通过,2->已退回',
+  `apply_quantity` int DEFAULT NULL COMMENT '申请数量',
   `city` varchar(20) DEFAULT NULL COMMENT '商家所在城市',
   `warehouse_city` varchar(20) DEFAULT NULL COMMENT '仓库所属城市',
   `is_pay` smallint DEFAULT NULL COMMENT '关联入库申请单是否已支付:0->未支付(默认),1->已支付,2->超时未支付',
+  `transport_order_id` varchar(255) DEFAULT NULL COMMENT '关联运输单号',
   `remark` varchar(500) DEFAULT NULL COMMENT '备注(退回商品上架申请原因)',
   `fee` decimal(10,2) DEFAULT NULL COMMENT '入库申请支付费用',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -208,3 +211,7 @@ CREATE TABLE `sys_user` (
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统用户';
+
+-- ----------------------------
+-- Mock data removed by request
+-- ----------------------------

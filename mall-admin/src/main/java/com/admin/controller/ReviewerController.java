@@ -61,6 +61,21 @@ public class ReviewerController {
         return CommonResult.success(reviewerService.getGoodsApplication(pageNum,pageSize,merchantId));
     }
 
+    @PostMapping("/merchant/cancelGoodsApply")
+    public CommonResult<?> cancelGoodsApply(@RequestParam String applyId,
+                                            @RequestParam String merchantId){
+        reviewerService.cancelGoodsApplyByMerchant(applyId, merchantId);
+        return CommonResult.success("申请已取消");
+    }
+
+    @PostMapping("/merchant/bindTransportOrderId")
+    public CommonResult<?> bindTransportOrderId(@RequestParam String applyId,
+                                                @RequestParam String merchantId,
+                                                @RequestParam String transportOrderId){
+        reviewerService.bindTransportOrderId(applyId, merchantId, transportOrderId);
+        return CommonResult.success("运输单号绑定成功");
+    }
+
     @GetMapping("/reviewer/fetchRegisterApplication")
     @Operation(summary = "分页查询注册申请", description = "审核员权限；返回待处理及历史注册申请列表。")
     public CommonResult<?> fetchRegisterApplication(@RequestParam(defaultValue = "1") int pageNum,

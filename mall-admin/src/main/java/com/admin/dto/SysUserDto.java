@@ -13,4 +13,6 @@ public class SysUserDto {
     private String userType;
     /** 展示名；登录响应里若为空则回退为 username */
     private String nickname;
+    /** 状态:0->禁用,1->启用 */
+    private Short status;
 }

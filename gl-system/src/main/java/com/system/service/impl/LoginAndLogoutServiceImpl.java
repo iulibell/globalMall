@@ -39,11 +39,12 @@ public class LoginAndLogoutServiceImpl implements LoginAndLogoutService {
         putMall(mallAlias, "5", "reviewer");
         LOGI_ALIAS_TO_ROLE = Collections.unmodifiableMap(mallAlias);
 
+        // 商城角色 key 为 merchant / user；keeper/driver 为物流侧历史别名，一并保留
         PERMISSIONS_BY_ROLE = Map.of(
-                "super", List.of("super", "manager","reviewer"),
+                "super", List.of("super", "manager", "reviewer"),
                 "manager", List.of("manager"),
-                "keeper", List.of("merchant"),
-                "driver", List.of("user"),
+                "merchant", List.of("merchant"),
+                "user", List.of("user"),
                 "reviewer", List.of("reviewer"));
     }
 
@@ -143,6 +144,7 @@ public class LoginAndLogoutServiceImpl implements LoginAndLogoutService {
         sessionDto.setUserType(sysUser.getUserType());
         sessionDto.setNickname(sysUser.getNickname());
         sessionDto.setPhone(sysUser.getPhone());
+        sessionDto.setCity(sysUser.getCity());
 
         stpLogic.getSession().set(AuthConstant.STP_ADMIN_INFO, UserSessionDto.toSessionMap(sessionDto));
 
@@ -170,6 +172,12 @@ public class LoginAndLogoutServiceImpl implements LoginAndLogoutService {
             resolvedRoleKey = normalizeUserTypeToRoleKey(dto.getUserType());
             if (resolvedRoleKey != null) {
                 tokenMap.put("role", resolvedRoleKey);
+            }
+            if (StrUtil.isNotBlank(dto.getPhone())) {
+                tokenMap.put("phone", dto.getPhone());
+            }
+            if (StrUtil.isNotBlank(dto.getCity())) {
+                tokenMap.put("city", dto.getCity());
             }
         }
         tokenMap.put("nickname", displayName);

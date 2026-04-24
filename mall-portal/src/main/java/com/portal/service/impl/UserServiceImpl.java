@@ -1,5 +1,6 @@
 package com.portal.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.common.api.CommonResult;
 import com.common.exception.Assert;
 import com.common.api.ResultCode;
@@ -22,6 +23,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public CommonResult<?> addOrder(OmsOrderDto omsOrderDto) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         if (omsOrderDto.getPrice() == null || omsOrderDto.getQuantity() == null) {
             Assert.fail("订单金额或数量不能为空");
         }
@@ -36,6 +39,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public CommonResult<?> payForOrder(String orderId, String userId) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         CommonResult<OmsOrderDto> orderDetail = executeWithRetry(
                 () -> omsServiceClient.getOrderById(orderId),
                 "查询订单失败，请稍后重试");
@@ -55,16 +60,22 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public CommonResult<?> cancelOrder(String orderId) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         return omsServiceClient.cancelOrder(orderId);
     }
 
     @Override
     public CommonResult<?> getOrder(int pageNum, int pageSize) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         return omsServiceClient.getOrder(pageNum, pageSize);
     }
 
     @Override
     public CommonResult<?> getOrderById(String orderId) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         return omsServiceClient.getOrderById(orderId);
     }
 

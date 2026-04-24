@@ -1,6 +1,7 @@
 package com.system.service;
 
 import com.system.dto.SysUserDto;
+import com.system.dto.SysUserInfoDto;
 
 import java.util.List;
 
@@ -38,4 +39,6 @@ public interface SysUserService {
      * @param userId 用户id
      */
     void deleteSysUser(String userId);
+
+    void updateInfo(SysUserInfoDto sysUserInfoDto);
 }

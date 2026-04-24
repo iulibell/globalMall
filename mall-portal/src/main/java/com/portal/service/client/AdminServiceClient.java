@@ -18,6 +18,13 @@ public interface AdminServiceClient {
     CommonResult<?> getGoodsApplication(@RequestParam(defaultValue = "1")int pageNum,
                                         @RequestParam(defaultValue = "10")int pageSize,
                                         @RequestParam String merchantId);
+    @PostMapping("/admin/merchant/cancelGoodsApply")
+    CommonResult<?> cancelGoodsApply(@RequestParam String applyId,
+                                     @RequestParam String merchantId);
+    @PostMapping("/admin/merchant/bindTransportOrderId")
+    CommonResult<?> bindTransportOrderId(@RequestParam String applyId,
+                                         @RequestParam String merchantId,
+                                         @RequestParam String transportOrderId);
     @GetMapping("/admin/sys/getPortalDtoById")
     PortalGoodsDto getPortalDtoById(@RequestParam String applyId);
 }

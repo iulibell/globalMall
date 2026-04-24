@@ -120,7 +120,3 @@ cd frontend
 npm install
 npm run dev
 ```
-
-## 安全说明
-
-各模块 `application.yml` 中的 JWT 密钥、数据库口令等仅为开发默认值；**勿用于生产**。内部接口 `security.internal` 上线前请按环境开启并配置令牌。

@@ -2,6 +2,10 @@ import { createRouter, createWebHistory } from 'vue-router'
 import MallHome from '@/components/MallHome.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
+import ProfileView from '@/views/ProfileView.vue'
+import GoodsDetailView from '@/views/GoodsDetailView.vue'
+import MerchantApplyGoodsView from '@/views/MerchantApplyGoodsView.vue'
+import MerchantApplyPayView from '@/views/MerchantApplyPayView.vue'
 
 export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -10,6 +14,12 @@ export const router = createRouter({
       path: '/',
       name: 'home',
       component: MallHome,
+      meta: { layout: 'mall' },
+    },
+    {
+      path: '/goods/:goodsId',
+      name: 'goods-detail',
+      component: GoodsDetailView,
       meta: { layout: 'mall' },
     },
     {
@@ -23,6 +33,24 @@ export const router = createRouter({
       name: 'register',
       component: RegisterView,
       meta: { layout: 'auth' },
+    },
+    {
+      path: '/profile',
+      name: 'profile',
+      component: ProfileView,
+      meta: { layout: 'profile' },
+    },
+    {
+      path: '/merchant/apply-goods',
+      name: 'merchant-apply-goods',
+      component: MerchantApplyGoodsView,
+      meta: { layout: 'profile' },
+    },
+    {
+      path: '/merchant/apply-pay',
+      name: 'merchant-apply-pay',
+      component: MerchantApplyPayView,
+      meta: { layout: 'profile' },
     },
   ],
 })

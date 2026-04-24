@@ -6,10 +6,12 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.system.dao.SysUserDao;
 import com.system.dto.SysUserDto;
+import com.system.dto.SysUserInfoDto;
 import com.system.entity.SysUser;
 import com.system.service.SysUserService;
 import jakarta.annotation.Resource;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -66,5 +68,13 @@ public class SysUserServiceImpl implements SysUserService {
     public void deleteSysUser(String userId) {
         sysUserDao.delete(new LambdaQueryWrapper<SysUser>()
                 .eq(SysUser::getUserId,userId));
+    }
+
+    @Override
+    public void updateInfo(SysUserInfoDto sysUserInfoDto) {
+        SysUser sysUser = new SysUser();
+        BeanUtils.copyProperties(sysUserInfoDto,sysUser);
+        sysUserDao.update(sysUser,new LambdaUpdateWrapper<SysUser>()
+                .eq(SysUser::getUserId,sysUser.getUserId()));
     }
 }

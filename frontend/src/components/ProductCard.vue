@@ -1,18 +1,51 @@
 <script setup>
-defineProps({
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const props = defineProps({
   title: { type: String, required: true },
   price: { type: String, required: true },
   rating: { type: Number, default: 4.5 },
   reviews: { type: Number, default: 0 },
   badge: { type: String, default: '' },
+  imageUrl: { type: String, default: '' },
   imageTone: { type: String, default: 'a' },
+  /** 有值时点击卡片进入商品详情 */
+  goodsId: { type: String, default: '' },
 })
+
+const router = useRouter()
+const imageFailed = ref(false)
+const displayImageUrl = computed(() => {
+  const u = (props.imageUrl || '').trim()
+  if (!u || imageFailed.value) return ''
+  return u
+})
+
+function onCardClick() {
+  const id = (props.goodsId || '').trim()
+  if (!id) return
+  router.push({ name: 'goods-detail', params: { goodsId: id } })
+}
+
+function onImageError() {
+  imageFailed.value = true
+}
 </script>
 
 <template>
-  <article class="card">
+  <article
+    class="card"
+    :class="{ clickable: goodsId }"
+    :role="goodsId ? 'link' : undefined"
+    :tabindex="goodsId ? 0 : undefined"
+    @click="onCardClick"
+    @keydown.enter.prevent="onCardClick"
+    @keydown.space.prevent="onCardClick"
+  >
     <div v-if="badge" class="badge">{{ badge }}</div>
-    <div class="img-wrap" :class="'tone-' + imageTone" role="img" :aria-label="title" />
+    <div v-if="!displayImageUrl" class="img-wrap" :class="'tone-' + imageTone" role="img" :aria-label="title" />
+    <img v-else class="img-wrap img-photo" :src="displayImageUrl" :alt="title" @error="onImageError" />
     <div class="body">
       <h3 class="title">{{ title }}</h3>
       <div class="rating" :aria-label="'评分 ' + rating + ' / 5 星'">
@@ -26,7 +59,7 @@ defineProps({
         <span class="prime-tag">商城</span>
         满额享免费配送
       </p>
-      <button type="button" class="add">加入购物车</button>
+      <button type="button" class="add" @click.stop>加入购物车</button>
     </div>
   </article>
 </template>
@@ -42,6 +75,15 @@ defineProps({
   flex-direction: column;
   height: 100%;
   transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.card.clickable {
+  cursor: pointer;
+}
+
+.card.clickable:focus-visible {
+  outline: 2px solid var(--mall-orange);
+  outline-offset: 2px;
 }
 
 .card:hover {
@@ -66,6 +108,12 @@ defineProps({
 .img-wrap {
   aspect-ratio: 1;
   background: linear-gradient(145deg, #2a2a32 0%, #18181c 100%);
+}
+
+.img-photo {
+  width: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .tone-a {

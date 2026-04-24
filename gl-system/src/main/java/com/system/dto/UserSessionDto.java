@@ -17,6 +17,7 @@ public class UserSessionDto {
     private static final String K_USER_TYPE = "userType";
     private static final String K_NICKNAME = "nickname";
     private static final String K_PHONE = "phone";
+    private static final String K_CITY = "city";
 
     private String userId;
     private String username;
@@ -24,6 +25,8 @@ public class UserSessionDto {
     /** 展示名；登录响应里若为空则回退为 username */
     private String nickname;
     private String phone;
+    /** 所在城市（商家上架等场景使用） */
+    private String city;
 
     /** 供 {@code session.set(adminInfo, …)} 使用 */
     public static Map<String, Object> toSessionMap(UserSessionDto dto) {
@@ -42,6 +45,9 @@ public class UserSessionDto {
         }
         if (StrUtil.isNotBlank(dto.getPhone())) {
             m.put(K_PHONE, dto.getPhone());
+        }
+        if (StrUtil.isNotBlank(dto.getCity())) {
+            m.put(K_CITY, dto.getCity());
         }
         return m;
     }
@@ -103,6 +109,10 @@ public class UserSessionDto {
         Object ph = map.get(K_PHONE);
         if (ph != null && StrUtil.isNotBlank(ph.toString())) {
             dto.setPhone(ph.toString());
+        }
+        Object ct = map.get(K_CITY);
+        if (ct != null && StrUtil.isNotBlank(ct.toString())) {
+            dto.setCity(ct.toString());
         }
         return dto;
     }

@@ -4,6 +4,7 @@ import com.common.api.CommonResult;
 import com.portal.dto.PortalOffShelfPayDto;
 import com.portal.dto.PortalGoodsApplicationDto;
 import com.portal.dto.PortalGoodsDto;
+import com.portal.dto.SysUserInfoDto;
 
 import java.util.List;
 
@@ -13,6 +14,11 @@ public interface MerchantService {
      * @param applyId 申请id
      */
     void payForInbound(String applyId);
+    /**
+     * 商家取消待支付的上架申请（将 mallStatus 置为 3）
+     * @param applyId 申请id
+     */
+    void cancelGoodsApply(String applyId);
     /**
      * 商家申请上架商品(merchant操作)
      * @param portalGoodsApplicationDto 商品上架申请dto
@@ -57,4 +63,11 @@ public interface MerchantService {
      * @return 商品列表
      */
     List<PortalGoodsDto> getPortalGoods(int pageNum, int pageSize, String merchantId);
+
+    /**
+     * 更新个人信息(merchant操作)
+     *
+     * @param sysUserInfoDto 用户信息dto
+     */
+    void updateInfo(SysUserInfoDto sysUserInfoDto);
 }

@@ -1,5 +1,6 @@
 package com.portal.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -22,6 +23,8 @@ public class PortalGoodsTypeServiceImpl implements PortalGoodsTypeService {
 
     @Override
     public List<PortalGoodsTypeDto> getType(int pageNum, int pageSize) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("manager");
         IPage<PortalGoodsType> page = new Page<>(pageNum,pageSize);
         portalGoodsTypeDao.selectPage(page,null);
         return page.convert(portalGoodsType -> {
@@ -33,6 +36,8 @@ public class PortalGoodsTypeServiceImpl implements PortalGoodsTypeService {
 
     @Override
     public void addType(PortalGoodsTypeDto portalGoodsTypeDto) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("manager");
         PortalGoodsType portalGoodsType = new PortalGoodsType();
         BeanUtils.copyProperties(portalGoodsTypeDto, portalGoodsType);
         Date now = new Date();
@@ -43,6 +48,8 @@ public class PortalGoodsTypeServiceImpl implements PortalGoodsTypeService {
 
     @Override
     public void updateType(PortalGoodsTypeDto portalGoodsTypeDto) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("manager");
         if (portalGoodsTypeDto.getTypeId() == null) {
             Assert.fail("类型id不能为空");
         }
@@ -57,6 +64,8 @@ public class PortalGoodsTypeServiceImpl implements PortalGoodsTypeService {
 
     @Override
     public void deleteType(Long typeId) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("manager");
         if (typeId == null) {
             Assert.fail("类型id不能为空");
         }

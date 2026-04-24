@@ -82,6 +82,21 @@ public interface ReviewerService {
     List<PortalGoodsApplicationDto> getGoodsApplication(int pageNum, int pageSize, String merchantId);
 
     /**
+     * 商家取消上架申请（仅待支付订单可取消）
+     * @param applyId 申请id
+     * @param merchantId 商家id
+     */
+    void cancelGoodsApplyByMerchant(String applyId, String merchantId);
+
+    /**
+     * 商家支付成功后绑定运输单号
+     * @param applyId 上架申请id
+     * @param merchantId 商家id
+     * @param transportOrderId 运输单号
+     */
+    void bindTransportOrderId(String applyId, String merchantId, String transportOrderId);
+
+    /**
      * 支付超时：仅当订单状态仍为「已过审(1)」的是否支付时置为「超时未支付(2)」。已支付、已超时、已取消/已删单则不修改。
      *
      * @param applyId 申请订单id

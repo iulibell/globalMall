@@ -19,8 +19,7 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
 import org.aspectj.lang.reflect.MethodSignature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
@@ -29,14 +28,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.util.URLUtil;
 import cn.hutool.json.JSONUtil;
 
 @Component
 @Aspect
+@Slf4j
 public class WebLogAspect {
-    private final Logger logger = LoggerFactory.getLogger(WebLogAspect.class);
 
     @Pointcut("execution(* com.*.controller.*.*(..)) || execution(* com.*.service.*.*(..))")
     public void webLogPointcut() {
@@ -72,17 +72,25 @@ public class WebLogAspect {
                 webLog.setDescription(log.summary());
             }
             long endTime = System.currentTimeMillis();
-            String urlStr = request.getRequestURL().toString();
-            webLog.setBasePath(StrUtil.removeSuffix(urlStr, URLUtil.url(urlStr).getPath()));
-            webLog.setUsername(request.getUserPrincipal().getName());
-            webLog.setIp(request.getRemoteAddr()); // 修复IP获取
-            webLog.setMethod(request.getMethod());
+            if (request != null) {
+                String urlStr = request.getRequestURL().toString();
+                webLog.setBasePath(StrUtil.removeSuffix(urlStr, URLUtil.url(urlStr).getPath()));
+                webLog.setIp(request.getRemoteAddr());
+                webLog.setMethod(request.getMethod());
+                webLog.setUri(request.getRequestURI());
+                webLog.setUrl(request.getRequestURL().toString());
+            } else {
+                webLog.setBasePath("");
+                webLog.setIp("unknown");
+                webLog.setMethod(method.getName());
+                webLog.setUri("");
+                webLog.setUrl("");
+            }
+            webLog.setUsername(resolveUsername(request));
             webLog.setParameter(getParameter(method, joinPoint.getArgs()));
             webLog.setResult(result);
             webLog.setSpendTime((int) (endTime - startTime));
             webLog.setStartTime(startTime);
-            webLog.setUri(request.getRequestURI());
-            webLog.setUrl(request.getRequestURL().toString());
 
             Map<String, Object> logMap = new HashMap<>();
             logMap.put("url", webLog.getUrl());
@@ -92,12 +100,25 @@ public class WebLogAspect {
             logMap.put("description", webLog.getDescription());
             logMap.put("requestId", requestId);
 
-            logger.info(Markers.appendEntries(logMap), JSONUtil.parse(webLog).toString());
+            log.info(Markers.appendEntries(logMap), JSONUtil.parse(webLog).toString());
 
             // 清理MDC
             MDC.remove("requestId");
         }
         return result;
+    }
+
+    private String resolveUsername(HttpServletRequest request) {
+        try {
+            StpUtil.checkLogin();
+            return StpUtil.getLoginIdAsString();
+        } catch (Exception ignored) {
+            // 匿名请求继续走 Principal/anonymous 兜底
+        }
+        if (request != null && request.getUserPrincipal() != null) {
+            return request.getUserPrincipal().getName();
+        }
+        return "anonymous";
     }
 
     private Object getParameter(Method method, Object[] args) {

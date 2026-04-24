@@ -1,9 +1,14 @@
 package com.common.util;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.LinkedHashSet;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -20,6 +25,7 @@ public class PictureUtil {
     private static final Pattern DATA_URL = Pattern.compile(
             "^data:([^;]+);base64,(.+)$",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+    private static final Set<String> DEFAULT_ALLOWED_URL_HOSTS = Set.of("localhost", "127.0.0.1");
 
     private static final long MAX_BYTES = 5L * 1024 * 1024;
 
@@ -39,7 +45,12 @@ public class PictureUtil {
             throw new IllegalArgumentException("商品图片不能为空");
         }
         String trimmed = picture.trim();
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            validateRemotePictureUrl(trimmed);
+            return trimmed;
+        }
         if (!trimmed.startsWith("data:")) {
+            validatePictureName(trimmed);
             return trimmed;
         }
         Matcher m = DATA_URL.matcher(trimmed);
@@ -108,6 +119,52 @@ public class PictureUtil {
             return null;
         }
         return Files.readAllBytes(target);
+    }
+
+    private static void validatePictureName(String pictureName) {
+        if (pictureName.isBlank()
+                || pictureName.contains("..")
+                || pictureName.indexOf('/') >= 0
+                || pictureName.indexOf('\\') >= 0) {
+            throw new IllegalArgumentException("非法图片名");
+        }
+    }
+
+    private static void validateRemotePictureUrl(String pictureUrl) {
+        final URI uri;
+        try {
+            uri = new URI(pictureUrl);
+        } catch (URISyntaxException e) {
+            throw new IllegalArgumentException("图片 URL 格式非法");
+        }
+        String scheme = uri.getScheme();
+        if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+            throw new IllegalArgumentException("仅支持 http/https 图片 URL");
+        }
+        String host = uri.getHost();
+        if (host == null || host.isBlank()) {
+            throw new IllegalArgumentException("图片 URL 缺少主机名");
+        }
+        String normalizedHost = host.toLowerCase(Locale.ROOT);
+        Set<String> allowHosts = loadAllowedUrlHosts();
+        if (!allowHosts.contains(normalizedHost)) {
+            throw new IllegalArgumentException("图片 URL 域名不在白名单内");
+        }
+    }
+
+    private static Set<String> loadAllowedUrlHosts() {
+        Set<String> hosts = new LinkedHashSet<>(DEFAULT_ALLOWED_URL_HOSTS);
+        String configured = System.getProperty("picture.url.whitelist", System.getenv("PICTURE_URL_WHITELIST"));
+        if (configured == null || configured.isBlank()) {
+            return hosts;
+        }
+        for (String raw : configured.split(",")) {
+            String h = raw == null ? "" : raw.trim().toLowerCase(Locale.ROOT);
+            if (!h.isEmpty()) {
+                hosts.add(h);
+            }
+        }
+        return hosts;
     }
 
     private static String extensionForMime(String mime) {

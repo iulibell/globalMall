@@ -1,5 +1,6 @@
 package com.portal.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -24,6 +25,8 @@ public class OmsCartServiceImpl implements OmsCartService {
 
     @Override
     public void addCart(OmsCartDto omsCartDto) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         if (omsCartDto.getQuantity() == null || omsCartDto.getQuantity() <= 0) {
             Assert.fail("购买数量必须大于0");
         }
@@ -56,6 +59,8 @@ public class OmsCartServiceImpl implements OmsCartService {
 
     @Override
     public void updateQuantity(Long id, String userId, Integer quantity) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         if (quantity == null || quantity <= 0) {
             Assert.fail("购买数量必须大于0");
         }
@@ -72,6 +77,8 @@ public class OmsCartServiceImpl implements OmsCartService {
 
     @Override
     public void checkCart(Long id, String userId, Short checked) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         if (checked == null || (checked != 0 && checked != 1)) {
             Assert.fail("勾选状态无效");
         }
@@ -88,6 +95,8 @@ public class OmsCartServiceImpl implements OmsCartService {
 
     @Override
     public void checkAll(String userId, Short checked) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         if (checked == null || (checked != 0 && checked != 1)) {
             Assert.fail("勾选状态无效");
         }
@@ -100,6 +109,8 @@ public class OmsCartServiceImpl implements OmsCartService {
 
     @Override
     public void deleteCart(Long id, String userId) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         int rows = omsCartDao.update(null, new LambdaUpdateWrapper<OmsCart>()
                 .eq(OmsCart::getId, id)
                 .eq(OmsCart::getUserId, userId)
@@ -113,6 +124,8 @@ public class OmsCartServiceImpl implements OmsCartService {
 
     @Override
     public List<OmsCartDto> listCart(String userId) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         List<OmsCart> list = omsCartDao.selectList(new LambdaQueryWrapper<OmsCart>()
                 .eq(OmsCart::getUserId, userId)
                 .eq(OmsCart::getDeleted, (short) 0)
@@ -126,6 +139,8 @@ public class OmsCartServiceImpl implements OmsCartService {
 
     @Override
     public OmsCartSettlePreviewDto settlePreview(String userId) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         List<OmsCart> checkedList = omsCartDao.selectList(new LambdaQueryWrapper<OmsCart>()
                 .eq(OmsCart::getUserId, userId)
                 .eq(OmsCart::getDeleted, (short) 0)
@@ -152,6 +167,8 @@ public class OmsCartServiceImpl implements OmsCartService {
 
     @Override
     public void clearCheckedCart(String userId) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         omsCartDao.update(null, new LambdaUpdateWrapper<OmsCart>()
                 .eq(OmsCart::getUserId, userId)
                 .eq(OmsCart::getDeleted, (short) 0)
@@ -162,6 +179,8 @@ public class OmsCartServiceImpl implements OmsCartService {
 
     @Override
     public void clearBoughtCart(String userId, String goodsId, String skuCode) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
         LambdaUpdateWrapper<OmsCart> updateWrapper = new LambdaUpdateWrapper<OmsCart>()
                 .eq(OmsCart::getUserId, userId)
                 .eq(OmsCart::getGoodsId, goodsId)

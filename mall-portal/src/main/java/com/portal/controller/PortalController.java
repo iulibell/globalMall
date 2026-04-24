@@ -44,4 +44,9 @@ public class PortalController {
     public CommonResult<Boolean> markOffShelfCompleted(@RequestParam Long offShelfId){
         return CommonResult.success(portalService.markOffShelfCompleted(offShelfId));
     }
+
+    @GetMapping("/getGoodsDetail")
+    public CommonResult<?> getGoodsDetail(@RequestParam String goodsId){
+        return CommonResult.success(portalService.getGoodsDetail(goodsId));
+    }
 }

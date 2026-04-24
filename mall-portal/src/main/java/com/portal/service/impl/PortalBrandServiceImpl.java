@@ -1,5 +1,6 @@
 package com.portal.service.impl;
 
+import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -22,6 +23,8 @@ public class PortalBrandServiceImpl implements PortalBrandService {
 
     @Override
     public List<PortalBrandDto> getBrand(int pageNum, int pageSize) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("manager");
         IPage<PortalBrand> page = new Page<>(pageNum, pageSize);
         portalBrandDao.selectPage(page, null);
         return page.convert(portalBrand -> {
@@ -33,6 +36,8 @@ public class PortalBrandServiceImpl implements PortalBrandService {
 
     @Override
     public void addBrand(PortalBrandDto portalBrandDto) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("manager");
         PortalBrand portalBrand = new PortalBrand();
         BeanUtils.copyProperties(portalBrandDto, portalBrand);
         Date now = new Date();
@@ -43,6 +48,8 @@ public class PortalBrandServiceImpl implements PortalBrandService {
 
     @Override
     public void updateBrand(PortalBrandDto portalBrandDto) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("manager");
         if (portalBrandDto.getId() == null) {
             Assert.fail("品牌id不能为空");
         }
@@ -58,6 +65,8 @@ public class PortalBrandServiceImpl implements PortalBrandService {
 
     @Override
     public void deleteBrand(Long id) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("manager");
         if (id == null) {
             Assert.fail("品牌id不能为空");
         }

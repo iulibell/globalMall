@@ -3,6 +3,7 @@ package com.portal.controller;
 import com.common.api.CommonResult;
 import com.portal.dto.PortalOffShelfPayDto;
 import com.portal.dto.PortalGoodsApplicationDto;
+import com.portal.dto.SysUserInfoDto;
 import com.portal.service.MerchantService;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
@@ -18,6 +19,12 @@ public class MerchantController {
     public CommonResult<?> payForInbound(@RequestParam String applyId){
         merchantService.payForInbound(applyId);
         return CommonResult.success("支付成功,请待司机上门取件");
+    }
+
+    @PostMapping("/cancelGoodsApply")
+    public CommonResult<?> cancelGoodsApply(@RequestParam String applyId){
+        merchantService.cancelGoodsApply(applyId);
+        return CommonResult.success("申请已取消");
     }
 
     @PostMapping("/applyGoods")
@@ -55,5 +62,11 @@ public class MerchantController {
                                           @RequestParam(defaultValue = "10")int pageSize,
                                           @RequestParam String merchantId){
         return CommonResult.success(merchantService.getPortalGoods(pageNum, pageSize, merchantId));
+    }
+
+    @PostMapping("/updateInfo")
+    public CommonResult<?> updateInfo(@RequestBody SysUserInfoDto sysUserInfoDto){
+        merchantService.updateInfo(sysUserInfoDto);
+        return CommonResult.success("修改成功!");
     }
 }

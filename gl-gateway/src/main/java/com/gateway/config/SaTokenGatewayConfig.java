@@ -35,7 +35,7 @@ public class SaTokenGatewayConfig {
         return new SaReactorFilter()
                 .addInclude("/**")
                 .setAuth(obj -> {
-                    ServerWebExchange ex = SaReactorSyncHolder.getContext();
+                    ServerWebExchange ex = SaReactorSyncHolder.getExchange();
                     if (ex != null && HttpMethod.OPTIONS.equals(ex.getRequest().getMethod())) {
                         return;
                     }
@@ -44,7 +44,7 @@ public class SaTokenGatewayConfig {
                     }
                 })
                 .setError(e -> {
-                    ServerWebExchange exchange = SaReactorSyncHolder.getContext();
+                    ServerWebExchange exchange = SaReactorSyncHolder.getExchange();
                     HttpHeaders headers = exchange.getResponse().getHeaders();
                     headers.set("Content-Type", "application/json; charset=utf-8");
                     headers.set("Access-Control-Allow-Origin", "*");

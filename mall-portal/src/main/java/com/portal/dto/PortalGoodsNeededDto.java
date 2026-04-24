@@ -13,4 +13,5 @@ public class PortalGoodsNeededDto {
     private Long locationId;
     @NotBlank(message = "商品编号不能为空")
     private String skuCode;
+    private Short category;
 }

@@ -14,14 +14,12 @@ import com.common.service.RedisService;
 import com.common.util.PictureUtil;
 import com.portal.dao.PortalGoodsDao;
 import com.portal.dao.PortalOffShelfDao;
-import com.portal.dto.PortalOffShelfPayDto;
-import com.portal.dto.PortalGoodsApplicationDto;
-import com.portal.dto.PortalGoodsDto;
-import com.portal.dto.WmsOutboundCreateDto;
+import com.portal.dto.*;
 import com.portal.entity.PortalGoods;
 import com.portal.entity.PortalOffShelf;
 import com.portal.service.MerchantService;
 import com.portal.service.client.AdminServiceClient;
+import com.portal.service.client.SystemServiceClient;
 import com.portal.service.client.WmsServiceClient;
 import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
@@ -48,19 +46,46 @@ public class MerchantServiceImpl implements MerchantService {
     private SnowflakeIdGenerator snowflakeIdGenerator;
     @Resource
     private WmsServiceClient wmsServiceClient;
+    @Resource
+    private SystemServiceClient systemServiceClient;
 
     @Override
     public void payForInbound(String applyId) {
-        wmsServiceClient.payForInbound(applyId);
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("merchant");
+        String merchantId = StpUtil.getLoginIdAsString();
+        CommonResult<?> wmsPayResult = wmsServiceClient.payForInbound(applyId);
+        if (wmsPayResult == null || wmsPayResult.getCode() != 200) {
+            Assert.fail(wmsPayResult != null && StrUtil.isNotBlank(wmsPayResult.getMessage()) ? wmsPayResult.getMessage() : "支付失败");
+        }
+        String transportOrderId = wmsPayResult.getData() == null ? "" : String.valueOf(wmsPayResult.getData()).trim();
+        if (StrUtil.isBlank(transportOrderId)) {
+            Assert.fail("支付成功但运输单号为空");
+        }
+        CommonResult<?> bindResult = adminServiceClient.bindTransportOrderId(applyId, merchantId, transportOrderId);
+        if (bindResult == null || bindResult.getCode() != 200) {
+            Assert.fail(bindResult != null && StrUtil.isNotBlank(bindResult.getMessage()) ? bindResult.getMessage() : "运输单号绑定失败");
+        }
         PortalGoods portalGoods = new PortalGoods();
         BeanUtils.copyProperties(adminServiceClient.getPortalDtoById(applyId), portalGoods);
         portalGoodsDao.insert(portalGoods);
     }
 
     @Override
-    public void applyGoods(PortalGoodsApplicationDto portalGoodsApplicationDto) {
-        StpUtil.checkPermission("merchant");
+    public void cancelGoodsApply(String applyId) {
         StpUtil.checkLogin();
+        StpUtil.checkPermission("merchant");
+        String merchantId = StpUtil.getLoginIdAsString();
+        CommonResult<?> result = adminServiceClient.cancelGoodsApply(applyId, merchantId);
+        if (result == null || result.getCode() != 200) {
+            Assert.fail(result != null && StrUtil.isNotBlank(result.getMessage()) ? result.getMessage() : "取消申请失败");
+        }
+    }
+
+    @Override
+    public void applyGoods(PortalGoodsApplicationDto portalGoodsApplicationDto) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("merchant");
         if (StrUtil.isEmpty(portalGoodsApplicationDto.getSkuName()) || StrUtil.isEmpty(portalGoodsApplicationDto.getPicture())
         || portalGoodsApplicationDto.getPrice() == null) {
             Assert.fail("商品信息不完整");
@@ -73,6 +98,14 @@ public class MerchantServiceImpl implements MerchantService {
             Assert.fail(e.getMessage());
         } catch (IOException e) {
             Assert.fail("图片上传失败，请稍后重试");
+        }
+
+        String loginId = StpUtil.getLoginIdAsString();
+        if (StrUtil.isBlank(portalGoodsApplicationDto.getUserId())) {
+            portalGoodsApplicationDto.setUserId(loginId);
+        }
+        if (StrUtil.isBlank(portalGoodsApplicationDto.getMerchantId())) {
+            portalGoodsApplicationDto.setMerchantId(loginId);
         }
 
         String applyId = String.valueOf(snowflakeIdGenerator.nextId());
@@ -88,8 +121,8 @@ public class MerchantServiceImpl implements MerchantService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void applyForOffShelf(String goodsId) {
-        StpUtil.checkPermission("merchant");
         StpUtil.checkLogin();
+        StpUtil.checkPermission("merchant");
         String merchantId = StpUtil.getLoginIdAsString();
 
         PortalGoods portalGoods = portalGoodsDao.selectOne(new LambdaQueryWrapper<PortalGoods>()
@@ -122,8 +155,8 @@ public class MerchantServiceImpl implements MerchantService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void payForOffShelf(PortalOffShelfPayDto portalOffShelfPayDto) {
-        StpUtil.checkPermission("merchant");
         StpUtil.checkLogin();
+        StpUtil.checkPermission("merchant");
         String merchantId = StpUtil.getLoginIdAsString();
 
         PortalOffShelf portalOffShelf = portalOffShelfDao.selectOne(new LambdaQueryWrapper<PortalOffShelf>()
@@ -191,11 +224,15 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     public CommonResult<?> getGoodsApplication(int pageNum, int pageSize, String merchantId) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("merchant");
         return adminServiceClient.getGoodsApplication(pageNum,pageSize,merchantId);
     }
 
     @Override
     public List<PortalGoodsDto> getPortalGoods(int pageNum, int pageSize, String merchantId) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("merchant");
         IPage<PortalGoods> page = new Page<>(pageNum,pageSize);
         portalGoodsDao.selectPage(page,new LambdaQueryWrapper<PortalGoods>()
                 .eq(PortalGoods::getMerchantId,merchantId));
@@ -204,5 +241,12 @@ public class MerchantServiceImpl implements MerchantService {
             BeanUtils.copyProperties(portalGoods,portalGoodsDto);
             return portalGoodsDto;
         }).getRecords();
+    }
+
+    @Override
+    public void updateInfo(SysUserInfoDto sysUserInfoDto) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("merchant");
+        systemServiceClient.updateInfo(sysUserInfoDto);
     }
 }

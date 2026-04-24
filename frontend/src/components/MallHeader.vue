@@ -1,12 +1,36 @@
 <script setup>
-import { ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { computed, ref } from 'vue'
+import { RouterLink, useRouter } from 'vue-router'
 
 const query = ref('')
 const emit = defineEmits(['search'])
+const router = useRouter()
 
 function onSearch() {
   emit('search', query.value)
+}
+
+const role = computed(() => localStorage.getItem('role') || '')
+const canAccessProfile = computed(() => ['super', 'manager', 'reviewer', 'merchant', 'user'].includes(role.value))
+const isLoggedIn = computed(() => Boolean(localStorage.getItem('satoken')))
+const displayName = computed(() => {
+  const nickname = (localStorage.getItem('nickname') || '').trim()
+  if (nickname) {
+    return nickname
+  }
+  return (localStorage.getItem('username') || '').trim() || '用户'
+})
+
+function logout() {
+  localStorage.removeItem('satoken')
+  localStorage.removeItem('tokenHead')
+  localStorage.removeItem('role')
+  localStorage.removeItem('username')
+  localStorage.removeItem('nickname')
+  localStorage.removeItem('userId')
+  localStorage.removeItem('phone')
+  localStorage.removeItem('city')
+  router.push({ name: 'login' })
 }
 </script>
 
@@ -16,8 +40,15 @@ function onSearch() {
       <div class="container top-inner">
         <nav class="top-links" aria-label="快捷链接">
           <a href="#">简体中文</a>
-          <RouterLink to="/login">您好，请登录</RouterLink>
-          <RouterLink to="/register">免费注册</RouterLink>
+          <div v-if="isLoggedIn" class="user-menu">
+            <button type="button" class="user-trigger" @click="router.push({ name: 'profile' })">您好，{{ displayName }}</button>
+            <div class="user-dropdown">
+              <button type="button" class="dropdown-item" @click="router.push({ name: 'profile' })">个人中心</button>
+              <button type="button" class="dropdown-item danger" @click="logout">退出登录</button>
+            </div>
+          </div>
+          <RouterLink v-else to="/login">您好，请登录</RouterLink>
+          <RouterLink v-if="!isLoggedIn" to="/register">免费注册</RouterLink>
           <a href="#">退换货与订单</a>
         </nav>
       </div>
@@ -123,6 +154,78 @@ function onSearch() {
   text-decoration: none;
 }
 
+.user-menu {
+  position: relative;
+  padding-bottom: 8px;
+  margin-bottom: -8px;
+}
+
+.user-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 28px;
+  border: none;
+  background: transparent;
+  padding: 4px 0;
+  color: var(--mall-text-muted);
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  min-width: 120px;
+  padding: 6px;
+  border-radius: 8px;
+  border: 1px solid var(--mall-border);
+  background: var(--mall-surface-elevated);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  display: none;
+  z-index: 80;
+}
+
+.user-menu:hover .user-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dropdown-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: var(--mall-text-muted);
+  text-align: left;
+  line-height: 34px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  font-weight: 500;
+  cursor: pointer;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 138, 0, 0.12);
+  color: var(--mall-orange-bright);
+}
+
+.dropdown-item.danger:hover {
+  color: #fca5a5;
+}
+
 .top-links a:hover {
   color: var(--mall-orange-bright);
 }
@@ -191,9 +294,16 @@ function onSearch() {
   background: var(--mall-surface-elevated);
   color: var(--mall-text);
   font-size: 0.75rem;
-  padding: 0 6px;
+  padding: 0 34px 0 10px;
   border-right: 1px solid var(--mall-border);
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='%23f4f4f5' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-size: 12px 12px;
+  background-position: right 14px center;
 }
 
 .search-input {
