@@ -26,10 +26,25 @@ function toCard(item, i) {
     ? picture
     : (picture ? `/src/assets/picture/${encodeURIComponent(picture)}` : '')
   const goodsPrefix = t('page_mall', 'mall_goods_prefix', pageDictFallback('page_mall', 'mall_goods_prefix', uiLang.value))
+  const pictureRaw = String(item?.picture || '').trim()
+  const merchantId =
+    item?.merchantId != null
+      ? String(item.merchantId).trim()
+      : item?.merchant_id != null
+        ? String(item.merchant_id).trim()
+        : ''
   return {
     goodsId: item.goodsId != null ? String(item.goodsId) : '',
     title: item.skuName || item.description || `${goodsPrefix}${item.goodsId || i + 1}`,
     price: Number(item.price || 0).toFixed(2),
+    merchantId,
+    skuCode:
+      item?.skuCode != null
+        ? String(item.skuCode).trim()
+        : item?.sku_code != null
+          ? String(item.sku_code).trim()
+          : '',
+    pictureForCart: pictureRaw,
     rating: 4.2,
     reviews: 0,
     badge: item.type || '',

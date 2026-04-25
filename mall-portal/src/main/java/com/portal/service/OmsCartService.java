@@ -8,17 +8,17 @@ import java.util.List;
 public interface OmsCartService {
     void addCart(OmsCartDto omsCartDto);
 
-    void updateQuantity(Long id, String userId, Integer quantity);
+    void updateQuantity(Long id, Integer quantity);
 
-    void checkCart(Long id, String userId, Short checked);
+    void checkCart(Long id, Short checked);
 
-    void checkAll(String userId, Short checked);
+    void checkAll(Short checked);
 
-    void deleteCart(Long id, String userId);
+    void deleteCart(Long id);
 
-    List<OmsCartDto> listCart(String userId);
+    List<OmsCartDto> listCart();
 
-    OmsCartSettlePreviewDto settlePreview(String userId);
+    OmsCartSettlePreviewDto settlePreview();
 
     void clearCheckedCart(String userId);
 

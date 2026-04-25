@@ -27,6 +27,8 @@ public class OmsCartServiceImpl implements OmsCartService {
     public void addCart(OmsCartDto omsCartDto) {
         StpUtil.checkLogin();
         StpUtil.checkPermission("user");
+        String loginUserId = StpUtil.getLoginIdAsString();
+        omsCartDto.setUserId(loginUserId);
         if (omsCartDto.getQuantity() == null || omsCartDto.getQuantity() <= 0) {
             Assert.fail("购买数量必须大于0");
         }
@@ -58,15 +60,16 @@ public class OmsCartServiceImpl implements OmsCartService {
     }
 
     @Override
-    public void updateQuantity(Long id, String userId, Integer quantity) {
+    public void updateQuantity(Long id, Integer quantity) {
         StpUtil.checkLogin();
         StpUtil.checkPermission("user");
+        String loginUserId = StpUtil.getLoginIdAsString();
         if (quantity == null || quantity <= 0) {
             Assert.fail("购买数量必须大于0");
         }
         int rows = omsCartDao.update(null, new LambdaUpdateWrapper<OmsCart>()
                 .eq(OmsCart::getId, id)
-                .eq(OmsCart::getUserId, userId)
+                .eq(OmsCart::getUserId, loginUserId)
                 .eq(OmsCart::getDeleted, (short) 0)
                 .set(OmsCart::getQuantity, quantity)
                 .set(OmsCart::getUpdateTime, new Date()));
@@ -76,15 +79,16 @@ public class OmsCartServiceImpl implements OmsCartService {
     }
 
     @Override
-    public void checkCart(Long id, String userId, Short checked) {
+    public void checkCart(Long id, Short checked) {
         StpUtil.checkLogin();
         StpUtil.checkPermission("user");
+        String loginUserId = StpUtil.getLoginIdAsString();
         if (checked == null || (checked != 0 && checked != 1)) {
             Assert.fail("勾选状态无效");
         }
         int rows = omsCartDao.update(null, new LambdaUpdateWrapper<OmsCart>()
                 .eq(OmsCart::getId, id)
-                .eq(OmsCart::getUserId, userId)
+                .eq(OmsCart::getUserId, loginUserId)
                 .eq(OmsCart::getDeleted, (short) 0)
                 .set(OmsCart::getChecked, checked)
                 .set(OmsCart::getUpdateTime, new Date()));
@@ -94,26 +98,28 @@ public class OmsCartServiceImpl implements OmsCartService {
     }
 
     @Override
-    public void checkAll(String userId, Short checked) {
+    public void checkAll(Short checked) {
         StpUtil.checkLogin();
         StpUtil.checkPermission("user");
+        String loginUserId = StpUtil.getLoginIdAsString();
         if (checked == null || (checked != 0 && checked != 1)) {
             Assert.fail("勾选状态无效");
         }
         omsCartDao.update(null, new LambdaUpdateWrapper<OmsCart>()
-                .eq(OmsCart::getUserId, userId)
+                .eq(OmsCart::getUserId, loginUserId)
                 .eq(OmsCart::getDeleted, (short) 0)
                 .set(OmsCart::getChecked, checked)
                 .set(OmsCart::getUpdateTime, new Date()));
     }
 
     @Override
-    public void deleteCart(Long id, String userId) {
+    public void deleteCart(Long id) {
         StpUtil.checkLogin();
         StpUtil.checkPermission("user");
+        String loginUserId = StpUtil.getLoginIdAsString();
         int rows = omsCartDao.update(null, new LambdaUpdateWrapper<OmsCart>()
                 .eq(OmsCart::getId, id)
-                .eq(OmsCart::getUserId, userId)
+                .eq(OmsCart::getUserId, loginUserId)
                 .eq(OmsCart::getDeleted, (short) 0)
                 .set(OmsCart::getDeleted, (short) 1)
                 .set(OmsCart::getUpdateTime, new Date()));
@@ -123,11 +129,12 @@ public class OmsCartServiceImpl implements OmsCartService {
     }
 
     @Override
-    public List<OmsCartDto> listCart(String userId) {
+    public List<OmsCartDto> listCart() {
         StpUtil.checkLogin();
         StpUtil.checkPermission("user");
+        String loginUserId = StpUtil.getLoginIdAsString();
         List<OmsCart> list = omsCartDao.selectList(new LambdaQueryWrapper<OmsCart>()
-                .eq(OmsCart::getUserId, userId)
+                .eq(OmsCart::getUserId, loginUserId)
                 .eq(OmsCart::getDeleted, (short) 0)
                 .orderByDesc(OmsCart::getUpdateTime));
         return list.stream().map(omsCart -> {
@@ -138,11 +145,12 @@ public class OmsCartServiceImpl implements OmsCartService {
     }
 
     @Override
-    public OmsCartSettlePreviewDto settlePreview(String userId) {
+    public OmsCartSettlePreviewDto settlePreview() {
         StpUtil.checkLogin();
         StpUtil.checkPermission("user");
+        String loginUserId = StpUtil.getLoginIdAsString();
         List<OmsCart> checkedList = omsCartDao.selectList(new LambdaQueryWrapper<OmsCart>()
-                .eq(OmsCart::getUserId, userId)
+                .eq(OmsCart::getUserId, loginUserId)
                 .eq(OmsCart::getDeleted, (short) 0)
                 .eq(OmsCart::getChecked, (short) 1));
         OmsCartSettlePreviewDto previewDto = new OmsCartSettlePreviewDto();

@@ -3,6 +3,7 @@ package com.admin.service.client;
 import com.admin.dto.PortalGoodsDto;
 import com.admin.dto.PortalBrandDto;
 import com.admin.dto.PortalGoodsTypeDto;
+import com.common.api.CommonResult;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,17 +14,17 @@ import java.util.List;
 
 @FeignClient("mall-portal")
 public interface PortalServiceClient {
-    @GetMapping("/portal/manager/getPortalGoodsByCategory")
-    List<PortalGoodsDto> getRegularPortalGoods(@RequestParam int pageNum,
+    @GetMapping("/portal/manager/getGoodsByCategory")
+    List<PortalGoodsDto> getPortalGoods(@RequestParam int pageNum,
                                                @RequestParam int pageSize,
                                                @RequestParam Short category);
 
     @GetMapping("/portal/manager/getPortalGoodsById")
     PortalGoodsDto getPortalGoodsById(@RequestParam String goodsId);
 
-    @GetMapping("/portal/manager/getGoodsType")
-    List<PortalGoodsTypeDto> getGoodsType(@RequestParam int pageNum,
-                                          @RequestParam int pageSize);
+    @GetMapping("/portal/getGoodsType")
+    CommonResult<List<PortalGoodsTypeDto>> getGoodsType(@RequestParam int pageNum,
+                                                        @RequestParam int pageSize);
 
     @PostMapping("/portal/manager/addGoodsType")
     void addGoodsType(@RequestBody PortalGoodsTypeDto portalGoodsTypeDto);
@@ -35,8 +36,8 @@ public interface PortalServiceClient {
     void deleteGoodsType(@RequestParam Long typeId);
 
     @GetMapping("/portal/manager/getBrand")
-    List<PortalBrandDto> getBrand(@RequestParam int pageNum,
-                                  @RequestParam int pageSize);
+    CommonResult<List<PortalBrandDto>> getBrand(@RequestParam int pageNum,
+                                                @RequestParam int pageSize);
 
     @PostMapping("/portal/manager/addBrand")
     void addBrand(@RequestBody PortalBrandDto portalBrandDto);

@@ -2,12 +2,26 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
+  fetchManagerPortalGoods,
+  fetchManagerPortalGoodsById,
+  fetchManagerGoodsTypes,
+  addManagerGoodsType,
+  updateManagerGoodsType,
+  deleteManagerGoodsType,
+  fetchManagerBrands,
+  addManagerBrand,
+  updateManagerBrand,
+  deleteManagerBrand,
   approveRegisterApplication,
   approveGoodsApplication,
   deleteSuperUser,
   fetchSuperUserById,
   fetchSuperUserByType,
   fetchSuperUserList,
+  fetchSuperDictionaryList,
+  addSuperDictionary,
+  updateSuperDictionary,
+  deleteSuperDictionary,
   fetchMerchantOwnGoodsApplications,
   fetchMerchantGoodsApplications,
   fetchReviewerRegisterApplications,
@@ -15,7 +29,17 @@ import {
   rejectRegisterApplication,
   updateSuperUser,
 } from '@/api/admin'
-import { fetchMerchantPortalGoods, merchantApplyForOffShelf, merchantUpdateInfo } from '@/api/portal'
+import {
+  cancelUserOrder,
+  createOrderFromCart,
+  deleteUserCartItem,
+  fetchMerchantPortalGoods,
+  fetchUserOrderList,
+  fetchUserCartList,
+  userUpdateInfo,
+  merchantApplyForOffShelf,
+  merchantUpdateInfo,
+} from '@/api/portal'
 import MallLanguageDropdown from '@/components/MallLanguageDropdown.vue'
 import { useUiLang } from '@/composables/useUiLang.js'
 import { useMultiDictionary } from '@/composables/useMultiDictionary.js'
@@ -28,9 +52,17 @@ const S_HOME = 's_home'
 const S_USERS = 's_users'
 const S_TYPE = 's_type'
 const S_ID = 's_id'
+const S_DICT = 's_dict'
+const MG_GOODS = 'mg_goods'
+const MG_QUERY = 'mg_query'
+const MG_TYPE = 'mg_type'
+const MG_BRAND = 'mg_brand'
 const M_OVER = 'm_overview'
 const M_APPLY_LIST = 'm_apply_list'
 const M_MY_GOODS = 'm_my_goods'
+const U_HOME = 'u_home'
+const U_ORDER = 'u_order'
+const U_CART = 'u_cart'
 
 const router = useRouter()
 const route = useRoute()
@@ -91,11 +123,21 @@ const superTabs = computed(() => [
   { key: S_USERS, label: txp('profile_super_tab_users') },
   { key: S_TYPE, label: txp('profile_super_tab_type') },
   { key: S_ID, label: txp('profile_super_tab_id') },
+  { key: S_DICT, label: txp('profile_super_tab_dict') },
+])
+
+const managerTabs = computed(() => [
+  { key: S_HOME, label: txp('profile_tab_home') },
+  { key: MG_GOODS, label: txp('profile_manager_tab_goods_list') },
+  { key: MG_QUERY, label: txp('profile_manager_tab_goods_query') },
+  { key: MG_TYPE, label: txp('profile_manager_tab_type_list') },
+  { key: MG_BRAND, label: txp('profile_manager_tab_brand_list') },
 ])
 
 const adminSidebarItems = computed(() => {
   if (role.value === 'reviewer') return reviewerTabs.value
   if (role.value === 'super') return superTabs.value
+  if (role.value === 'manager') return managerTabs.value
   return []
 })
 
@@ -105,8 +147,15 @@ const merchantTabs = computed(() => [
   { key: M_MY_GOODS, label: txp('profile_merchant_my_goods') },
 ])
 
+const userTabs = computed(() => [
+  { key: U_HOME, label: txp('profile_tab_home') },
+  { key: U_ORDER, label: txp('profile_user_tab_my_orders') },
+  { key: U_CART, label: txp('profile_user_tab_my_cart') },
+])
+
 const reviewerActiveTab = ref(R_HOME)
 const superActiveTab = ref(S_HOME)
+const managerActiveTab = ref(S_HOME)
 const registerAppsLoading = ref(false)
 const registerAppsError = ref('')
 const registerApps = ref([])
@@ -128,6 +177,27 @@ const superTypePageNum = ref(1)
 const superTypePageSize = ref(10)
 const superQueryType = ref('1')
 const superQueryUserId = ref('')
+const superDictLoading = ref(false)
+const superDictError = ref('')
+const superDictList = ref([])
+const superDictPageNum = ref(1)
+const superDictPageSize = ref(10)
+const superDictDialogVisible = ref(false)
+const superDictSubmitting = ref(false)
+const superDictDialogMode = ref('add')
+const superDictDeleteDialogVisible = ref(false)
+const superDictDeleteSubmitting = ref(false)
+const superDictDialogError = ref('')
+const superDictDeleteError = ref('')
+const superDictForm = ref({
+  dictType: '',
+  dictValue: '',
+  dictName: '',
+  lang: '1',
+  sort: 0,
+  status: 1,
+})
+const superDictDeleteTarget = ref(null)
 const editDialogVisible = ref(false)
 const editSubmitting = ref(false)
 const editForm = ref({
@@ -141,6 +211,7 @@ const deleteDialogVisible = ref(false)
 const deleteSubmitting = ref(false)
 const deleteTarget = ref(null)
 const merchantActiveTab = ref(M_OVER)
+const userActiveTab = ref(U_HOME)
 
 const merchantProfileForm = ref({
   nickname: '',
@@ -165,6 +236,50 @@ const merchantGoodsListError = ref('')
 const merchantGoodsList = ref([])
 const merchantGoodsPageNum = ref(1)
 const merchantGoodsPageSize = ref(10)
+const userCartLoading = ref(false)
+const userCartError = ref('')
+const userCartList = ref([])
+const deletingCartId = ref('')
+const creatingCartOrderId = ref('')
+const userOrderLoading = ref(false)
+const userOrderError = ref('')
+const userOrderTip = ref('')
+const userOrderList = ref([])
+const userOrderPageNum = ref(1)
+const userOrderPageSize = ref(10)
+const cancellingOrderId = ref('')
+const managerGoodsLoading = ref(false)
+const managerGoodsError = ref('')
+const managerGoodsList = ref([])
+const managerGoodsPageNum = ref(1)
+const managerGoodsPageSize = ref(10)
+const managerGoodsCategory = ref('1')
+const managerQueryGoodsId = ref('')
+const managerQueryLoading = ref(false)
+const managerQueryError = ref('')
+const managerQueryResult = ref(null)
+const managerTypeLoading = ref(false)
+const managerTypeError = ref('')
+const managerTypeList = ref([])
+const managerTypePageNum = ref(1)
+const managerTypePageSize = ref(10)
+const managerBrandLoading = ref(false)
+const managerBrandError = ref('')
+const managerBrandList = ref([])
+const managerBrandPageNum = ref(1)
+const managerBrandPageSize = ref(10)
+const managerCrudDialogVisible = ref(false)
+const managerCrudSubmitting = ref(false)
+const managerCrudError = ref('')
+const managerCrudKind = ref('type')
+const managerCrudMode = ref('add')
+const managerCrudForm = ref({
+  typeId: null,
+  typeName: '',
+  id: null,
+  brandId: '',
+  brandName: '',
+})
 
 function goLogin() {
   router.push({ name: 'login' })
@@ -182,8 +297,8 @@ function logout() {
   router.push({ name: 'login' })
 }
 
-function syncMerchantProfileForm() {
-  if (role.value !== 'merchant') return
+function syncMallProfileForm() {
+  if (!['merchant', 'user'].includes(role.value)) return
   refreshMallSessionFromStorage()
   merchantProfileForm.value = {
     nickname: localStorage.getItem('nickname') || '',
@@ -195,7 +310,7 @@ function syncMerchantProfileForm() {
   merchantProfileError.value = ''
 }
 
-async function submitMerchantProfile() {
+async function submitMallProfile() {
   const uid = (userId.value || '').trim()
   if (!uid) {
     merchantProfileError.value = txp('profile_err_missing_uid')
@@ -214,7 +329,8 @@ async function submitMerchantProfile() {
     if (merchantProfileForm.value.password.trim()) {
       payload.password = merchantProfileForm.value.password.trim()
     }
-    const { ok, data } = await merchantUpdateInfo(payload)
+    const updater = role.value === 'merchant' ? merchantUpdateInfo : userUpdateInfo
+    const { ok, data } = await updater(payload)
     if (!ok || data?.code !== 200) {
       merchantProfileError.value = data?.message || txp('profile_save_failed')
       return
@@ -291,6 +407,10 @@ function canPayApply(row) {
 function canViewLogistic(row) {
   return Number(row?.isPay) === 1
     && String(row?.transportOrderId || '').trim() !== ''
+}
+
+function canViewUserOrderLogistic(row) {
+  return String(row?.transportOrderId || '').trim() !== ''
 }
 
 function viewLogistic(row) {
@@ -377,12 +497,381 @@ async function loadMerchantGoodsList() {
   }
 }
 
+async function loadUserCartList() {
+  userCartLoading.value = true
+  userCartError.value = ''
+  try {
+    const { ok, data } = await fetchUserCartList()
+    if (!ok || data?.code !== 200) {
+      userCartList.value = []
+      userCartError.value = data?.message || txp('profile_user_cart_load_fail')
+      return
+    }
+    userCartList.value = Array.isArray(data?.data) ? data.data : []
+  } catch {
+    userCartList.value = []
+    userCartError.value = txp('profile_net_portal')
+  } finally {
+    userCartLoading.value = false
+  }
+}
+
+async function removeUserCartRow(row) {
+  const id = row?.id != null ? String(row.id) : ''
+  if (!id) return
+  deletingCartId.value = id
+  userCartError.value = ''
+  try {
+    const { ok, data } = await deleteUserCartItem(id)
+    if (!ok || data?.code !== 200) {
+      userCartError.value = data?.message || txp('profile_user_cart_delete_fail')
+      return
+    }
+    await loadUserCartList()
+  } catch {
+    userCartError.value = txp('profile_net_portal')
+  } finally {
+    deletingCartId.value = ''
+  }
+}
+
+function setUserTab(key) {
+  userActiveTab.value = key
+  if (key === U_ORDER) {
+    loadUserOrderList()
+    return
+  }
+  if (key === U_CART) {
+    loadUserCartList()
+  }
+}
+
+async function createOrderAndGoPay(row) {
+  const cartId = row?.id
+  if (cartId == null) return
+  const userPhone = String(localStorage.getItem('phone') || '').trim()
+  const city = String(localStorage.getItem('city') || '').trim()
+  if (!userPhone || !city) {
+    userCartError.value = txp('profile_user_order_need_contact')
+    return
+  }
+  creatingCartOrderId.value = String(cartId)
+  userCartError.value = ''
+  try {
+    const { ok, data } = await createOrderFromCart({ cartId, userPhone, city })
+    if (!ok || data?.code !== 200) {
+      userCartError.value = data?.message || txp('profile_user_order_create_fail')
+      return
+    }
+    const payload = data?.data || {}
+    router.push({
+      name: 'order-pay',
+      query: {
+        orderId: payload.orderId || '',
+        expireAt: payload.expireAt || '',
+      },
+    })
+  } catch {
+    userCartError.value = txp('profile_net_portal')
+  } finally {
+    creatingCartOrderId.value = ''
+  }
+}
+
+function orderStatusText(status) {
+  const s = Number(status)
+  if (s === 0) return txp('pay_pending')
+  if (s === 2) return txp('pay_pending')
+  if (s === 3) return txp('pay_pending')
+  if (s === 4) return txp('pay_timeout')
+  if (s === 5) return txp('pay_paid')
+  return txp('status_unknown')
+}
+
+async function loadUserOrderList() {
+  userOrderLoading.value = true
+  userOrderError.value = ''
+  userOrderTip.value = ''
+  try {
+    const { ok, data } = await fetchUserOrderList({
+      pageNum: userOrderPageNum.value,
+      pageSize: userOrderPageSize.value,
+    })
+    if (!ok || data?.code !== 200) {
+      userOrderList.value = []
+      userOrderError.value = data?.message || txp('profile_user_order_load_fail')
+      return
+    }
+    userOrderList.value = Array.isArray(data?.data) ? data.data : []
+  } catch {
+    userOrderList.value = []
+    userOrderError.value = txp('profile_net_portal')
+  } finally {
+    userOrderLoading.value = false
+  }
+}
+
+function canPayOrder(row) {
+  const s = Number(row?.status)
+  return s === 0 || s === 2 || s === 3
+}
+
+function canCancelOrder(row) {
+  const s = Number(row?.status)
+  return s === 2 || s === 3
+}
+
+async function payOrderRow(row) {
+  const orderId = String(row?.orderId || '').trim()
+  if (!orderId) return
+  const rawCreateTime = row?.createTime
+  const createAtMs = rawCreateTime ? new Date(rawCreateTime).getTime() : Number.NaN
+  const hasCreateTime = Number.isFinite(createAtMs)
+  const expireAt = hasCreateTime ? createAtMs + 30 * 60 * 1000 : ''
+  router.push({
+    name: 'order-pay',
+    query: {
+      orderId,
+      expireAt,
+    },
+  })
+}
+
+async function cancelOrderRow(row) {
+  const orderId = String(row?.orderId || '').trim()
+  if (!orderId) return
+  cancellingOrderId.value = orderId
+  userOrderError.value = ''
+  userOrderTip.value = ''
+  try {
+    const { ok, data } = await cancelUserOrder(orderId)
+    if (!ok || data?.code !== 200) {
+      userOrderError.value = data?.message || txp('profile_user_order_cancel_fail')
+      return
+    }
+    userOrderTip.value = data?.message || txp('profile_user_order_cancel_ok')
+    await loadUserOrderList()
+  } catch {
+    userOrderError.value = txp('profile_net_portal')
+  } finally {
+    cancellingOrderId.value = ''
+  }
+}
+
+async function loadManagerGoodsList() {
+  managerGoodsLoading.value = true
+  managerGoodsError.value = ''
+  try {
+    const category = Number(managerGoodsCategory.value)
+    const { ok, data } = await fetchManagerPortalGoods({
+      pageNum: managerGoodsPageNum.value,
+      pageSize: managerGoodsPageSize.value,
+      category: Number.isNaN(category) ? 1 : category,
+    })
+    if (!ok || data?.code !== 200) {
+      managerGoodsList.value = []
+      managerGoodsError.value = data?.message || txp('profile_manager_goods_list_fail')
+      return
+    }
+    managerGoodsList.value = Array.isArray(data?.data) ? data.data : []
+  } catch {
+    managerGoodsList.value = []
+    managerGoodsError.value = txp('profile_net_admin')
+  } finally {
+    managerGoodsLoading.value = false
+  }
+}
+
+async function loadManagerGoodsById() {
+  const goodsId = managerQueryGoodsId.value.trim()
+  if (!goodsId) {
+    managerQueryError.value = txp('profile_manager_goods_query_need_id')
+    managerQueryResult.value = null
+    return
+  }
+  managerQueryLoading.value = true
+  managerQueryError.value = ''
+  try {
+    const { ok, data } = await fetchManagerPortalGoodsById(goodsId)
+    if (!ok || data?.code !== 200) {
+      managerQueryResult.value = null
+      managerQueryError.value = data?.message || txp('profile_manager_goods_query_fail')
+      return
+    }
+    managerQueryResult.value = data?.data || null
+    if (!managerQueryResult.value) {
+      managerQueryError.value = txp('profile_manager_goods_query_empty')
+    }
+  } catch {
+    managerQueryResult.value = null
+    managerQueryError.value = txp('profile_net_admin')
+  } finally {
+    managerQueryLoading.value = false
+  }
+}
+
+async function loadManagerTypeList() {
+  managerTypeLoading.value = true
+  managerTypeError.value = ''
+  try {
+    const { ok, data } = await fetchManagerGoodsTypes({
+      pageNum: managerTypePageNum.value,
+      pageSize: managerTypePageSize.value,
+    })
+    if (!ok || data?.code !== 200) {
+      managerTypeList.value = []
+      managerTypeError.value = data?.message || txp('profile_manager_type_list_fail')
+      return
+    }
+    managerTypeList.value = Array.isArray(data?.data) ? data.data : []
+  } catch {
+    managerTypeList.value = []
+    managerTypeError.value = txp('profile_net_admin')
+  } finally {
+    managerTypeLoading.value = false
+  }
+}
+
+function openManagerTypeDialog(row = null) {
+  managerCrudDialogVisible.value = true
+  managerCrudError.value = ''
+  managerCrudKind.value = 'type'
+  managerCrudMode.value = row ? 'edit' : 'add'
+  managerCrudForm.value = {
+    typeId: row?.typeId ?? null,
+    typeName: row?.typeName ?? '',
+    id: null,
+    brandId: '',
+    brandName: '',
+  }
+}
+
+async function removeManagerType(row) {
+  if (!window.confirm(txp('profile_manager_type_confirm_delete'))) return
+  const { ok, data } = await deleteManagerGoodsType(row?.typeId)
+  if (!ok || data?.code !== 200) {
+    managerTypeError.value = data?.message || txp('profile_manager_type_delete_fail')
+    return
+  }
+  await loadManagerTypeList()
+}
+
+async function loadManagerBrandList() {
+  managerBrandLoading.value = true
+  managerBrandError.value = ''
+  try {
+    const { ok, data } = await fetchManagerBrands({
+      pageNum: managerBrandPageNum.value,
+      pageSize: managerBrandPageSize.value,
+    })
+    if (!ok || data?.code !== 200) {
+      managerBrandList.value = []
+      managerBrandError.value = data?.message || txp('profile_manager_brand_list_fail')
+      return
+    }
+    managerBrandList.value = Array.isArray(data?.data) ? data.data : []
+  } catch {
+    managerBrandList.value = []
+    managerBrandError.value = txp('profile_net_admin')
+  } finally {
+    managerBrandLoading.value = false
+  }
+}
+
+function openManagerBrandDialog(row = null) {
+  managerCrudDialogVisible.value = true
+  managerCrudError.value = ''
+  managerCrudKind.value = 'brand'
+  managerCrudMode.value = row ? 'edit' : 'add'
+  managerCrudForm.value = {
+    typeId: null,
+    typeName: '',
+    id: row?.id ?? null,
+    brandId: row?.brandId ?? '',
+    brandName: row?.brandName ?? '',
+  }
+}
+
+function closeManagerCrudDialog() {
+  managerCrudDialogVisible.value = false
+  managerCrudSubmitting.value = false
+  managerCrudError.value = ''
+}
+
+async function submitManagerCrudDialog() {
+  managerCrudSubmitting.value = true
+  managerCrudError.value = ''
+  try {
+    if (managerCrudKind.value === 'type') {
+      const typeName = String(managerCrudForm.value.typeName || '').trim()
+      if (!typeName) {
+        managerCrudError.value = txp('profile_manager_type_need_name')
+        return
+      }
+      const apiCall = managerCrudMode.value === 'edit'
+        ? updateManagerGoodsType({ typeId: managerCrudForm.value.typeId, typeName })
+        : addManagerGoodsType({ typeName })
+      const { ok, data } = await apiCall
+      if (!ok || data?.code !== 200) {
+        managerCrudError.value = data?.message || txp(
+          managerCrudMode.value === 'edit'
+            ? 'profile_manager_type_update_fail'
+            : 'profile_manager_type_add_fail',
+        )
+        return
+      }
+      await loadManagerTypeList()
+      closeManagerCrudDialog()
+      return
+    }
+    const brandId = String(managerCrudForm.value.brandId || '').trim()
+    const brandName = String(managerCrudForm.value.brandName || '').trim()
+    if (!brandId) {
+      managerCrudError.value = txp('profile_manager_brand_need_id')
+      return
+    }
+    if (!brandName) {
+      managerCrudError.value = txp('profile_manager_brand_need_name')
+      return
+    }
+    const apiCall = managerCrudMode.value === 'edit'
+      ? updateManagerBrand({ id: managerCrudForm.value.id, brandId, brandName })
+      : addManagerBrand({ brandId, brandName })
+    const { ok, data } = await apiCall
+    if (!ok || data?.code !== 200) {
+      managerCrudError.value = data?.message || txp(
+        managerCrudMode.value === 'edit'
+          ? 'profile_manager_brand_update_fail'
+          : 'profile_manager_brand_add_fail',
+      )
+      return
+    }
+    await loadManagerBrandList()
+    closeManagerCrudDialog()
+  } finally {
+    managerCrudSubmitting.value = false
+  }
+}
+
+async function removeManagerBrand(row) {
+  if (!window.confirm(txp('profile_manager_brand_confirm_delete'))) return
+  const { ok, data } = await deleteManagerBrand(row?.id)
+  if (!ok || data?.code !== 200) {
+    managerBrandError.value = data?.message || txp('profile_manager_brand_delete_fail')
+    return
+  }
+  await loadManagerBrandList()
+}
+
 function isAdminTabActive(key) {
   if (role.value === 'reviewer') {
     return reviewerActiveTab.value === key
   }
   if (role.value === 'super') {
     return superActiveTab.value === key
+  }
+  if (role.value === 'manager') {
+    return managerActiveTab.value === key
   }
   return false
 }
@@ -394,12 +883,17 @@ function setAdminTab(key) {
   }
   if (role.value === 'super') {
     superActiveTab.value = key
+    return
+  }
+  if (role.value === 'manager') {
+    managerActiveTab.value = key
   }
 }
 
 const showAdminHome = computed(() => {
   if (role.value === 'reviewer') return reviewerActiveTab.value === R_HOME
   if (role.value === 'super') return superActiveTab.value === S_HOME
+  if (role.value === 'manager') return managerActiveTab.value === S_HOME
   return true
 })
 
@@ -620,6 +1114,120 @@ async function loadSuperUserById() {
   }
 }
 
+async function loadSuperDictionaryList() {
+  superDictLoading.value = true
+  superDictError.value = ''
+  try {
+    const { ok, data } = await fetchSuperDictionaryList({
+      pageNum: superDictPageNum.value,
+      pageSize: superDictPageSize.value,
+    })
+    if (!ok || data?.code !== 200) {
+      superDictList.value = []
+      superDictError.value = data?.message || txp('profile_super_dict_list_fail')
+      return
+    }
+    superDictList.value = Array.isArray(data?.data) ? data.data : []
+  } catch {
+    superDictList.value = []
+    superDictError.value = txp('profile_net_admin')
+  } finally {
+    superDictLoading.value = false
+  }
+}
+
+function openSuperDictDialog(row = null) {
+  superDictDialogVisible.value = true
+  superDictDialogError.value = ''
+  superDictDialogMode.value = row ? 'edit' : 'add'
+  superDictForm.value = {
+    dictType: row?.dictType || '',
+    dictValue: row?.dictValue || '',
+    dictName: row?.dictName || '',
+    lang: String(row?.lang || '1'),
+    sort: Number(row?.sort ?? 0),
+    status: Number(row?.status ?? 1),
+  }
+}
+
+function closeSuperDictDialog() {
+  superDictDialogVisible.value = false
+  superDictDialogError.value = ''
+}
+
+async function submitSuperDictDialog() {
+  const payload = {
+    dictType: String(superDictForm.value.dictType || '').trim(),
+    dictValue: String(superDictForm.value.dictValue || '').trim(),
+    dictName: String(superDictForm.value.dictName || '').trim(),
+    lang: String(superDictForm.value.lang || '').trim() || '1',
+  }
+  if (!payload.dictType || !payload.dictValue || !payload.dictName) {
+    superDictDialogError.value = txp('profile_super_dict_required')
+    return
+  }
+  superDictSubmitting.value = true
+  superDictDialogError.value = ''
+  try {
+    if (superDictDialogMode.value === 'add') {
+      const { ok, data } = await addSuperDictionary({
+        ...payload,
+        sort: Number(superDictForm.value.sort ?? 0),
+        status: Number(superDictForm.value.status ?? 1),
+      })
+      if (!ok || data?.code !== 200) {
+        superDictDialogError.value = data?.message || txp('profile_super_dict_add_fail')
+        return
+      }
+    } else {
+      const { ok, data } = await updateSuperDictionary(payload)
+      if (!ok || data?.code !== 200) {
+        superDictDialogError.value = data?.message || txp('profile_super_dict_update_fail')
+        return
+      }
+    }
+    closeSuperDictDialog()
+    await loadSuperDictionaryList()
+  } finally {
+    superDictSubmitting.value = false
+  }
+}
+
+function openSuperDictDeleteDialog(row) {
+  superDictDeleteDialogVisible.value = true
+  superDictDeleteError.value = ''
+  superDictDeleteTarget.value = row
+}
+
+function closeSuperDictDeleteDialog() {
+  superDictDeleteDialogVisible.value = false
+  superDictDeleteError.value = ''
+  superDictDeleteTarget.value = null
+}
+
+async function confirmSuperDictDelete() {
+  if (!superDictDeleteTarget.value) return
+  superDictDeleteSubmitting.value = true
+  superDictDeleteError.value = ''
+  try {
+    const row = superDictDeleteTarget.value
+    const { ok, data } = await deleteSuperDictionary({
+      dictType: row.dictType,
+      dictName: row.dictName,
+      dictValue: row.dictValue,
+      lang: row.lang,
+    })
+    if (!ok || data?.code !== 200) {
+      superDictDeleteError.value = data?.message || txp('profile_super_dict_delete_fail')
+      return
+    }
+    closeSuperDictDeleteDialog()
+    await loadSuperDictionaryList()
+  } finally {
+    superDictDeleteSubmitting.value = false
+  }
+}
+
 function openEditDialog(row) {
   editForm.value = {
     userId: row.userId == null ? '' : String(row.userId),
@@ -688,6 +1296,8 @@ async function reloadSuperCurrentTab() {
     await loadSuperUsersByType()
   } else if (superActiveTab.value === S_ID) {
     await loadSuperUserById()
+  } else if (superActiveTab.value === S_DICT) {
+    await loadSuperDictionaryList()
   }
 }
 
@@ -749,6 +1359,27 @@ watch(
     } else if (tab === S_ID) {
       superUsers.value = []
       superError.value = ''
+    } else if (tab === S_DICT) {
+      loadSuperDictionaryList()
+    }
+  },
+)
+
+watch(
+  () => managerActiveTab.value,
+  (tab) => {
+    if (role.value === 'manager' && tab === MG_GOODS) {
+      loadManagerGoodsList()
+    }
+    if (role.value === 'manager' && tab === MG_QUERY) {
+      managerQueryError.value = ''
+      managerQueryResult.value = null
+    }
+    if (role.value === 'manager' && tab === MG_TYPE) {
+      loadManagerTypeList()
+    }
+    if (role.value === 'manager' && tab === MG_BRAND) {
+      loadManagerBrandList()
     }
   },
 )
@@ -758,9 +1389,7 @@ watch(
   ([r, t]) => {
     if (!t || !['merchant', 'user'].includes(r)) return
     refreshMallSessionFromStorage()
-    if (r === 'merchant') {
-      syncMerchantProfileForm()
-    }
+    syncMallProfileForm()
   },
   { immediate: true },
 )
@@ -771,17 +1400,17 @@ watch(
     if (route.name !== 'profile' || !token.value) return
     if (!['merchant', 'user'].includes(role.value)) return
     refreshMallSessionFromStorage()
-    if (role.value === 'merchant') {
-      syncMerchantProfileForm()
-    }
+    syncMallProfileForm()
   },
 )
 
 onMounted(() => {
   if (!token.value || !['merchant', 'user'].includes(role.value)) return
   refreshMallSessionFromStorage()
-  if (role.value === 'merchant') {
-    syncMerchantProfileForm()
+  syncMallProfileForm()
+  if (role.value === 'user' && route.query.tab === 'orders') {
+    userActiveTab.value = U_ORDER
+    loadUserOrderList()
   }
 })
 
@@ -794,6 +1423,19 @@ watch(
     }
     if (role.value === 'merchant' && tab === M_MY_GOODS) {
       loadMerchantGoodsList()
+    }
+  },
+)
+
+watch(
+  () => userActiveTab.value,
+  (tab) => {
+    if (role.value === 'user' && tab === U_ORDER) {
+      loadUserOrderList()
+      return
+    }
+    if (role.value === 'user' && tab === U_CART) {
+      loadUserCartList()
     }
   },
 )
@@ -881,7 +1523,7 @@ watch(
           <p v-if="registerAppsLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
           <p v-else-if="registerAppsError" class="panel-tip error">{{ registerAppsError }}</p>
           <p v-else-if="registerApps.length === 0" class="panel-tip">{{ txp('profile_reg_empty') }}</p>
-          <div v-else class="table-wrap">
+          <div v-else class="table-wrap dict-table-wrap">
             <table class="table">
               <thead>
                 <tr>
@@ -1110,6 +1752,234 @@ watch(
           </div>
         </section>
 
+        <section v-if="role === 'super' && superActiveTab === S_DICT" class="panel">
+          <div class="panel-head">
+            <h3>{{ txp('profile_super_tab_dict') }}</h3>
+            <button class="btn primary" @click="openSuperDictDialog()">{{ txp('profile_super_add_dict') }}</button>
+          </div>
+          <div class="register-filter">
+            <label>
+              {{ txp('profile_page') }}
+              <input v-model.number="superDictPageNum" type="number" min="1" class="mini-input" />
+            </label>
+            <label>
+              {{ txp('profile_page_size') }}
+              <input v-model.number="superDictPageSize" type="number" min="1" class="mini-input" />
+            </label>
+            <button class="btn ghost" @click="loadSuperDictionaryList">{{ txp('profile_refresh') }}</button>
+          </div>
+          <p v-if="superDictLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
+          <p v-else-if="superDictError" class="panel-tip error">{{ superDictError }}</p>
+          <p v-else-if="superDictList.length === 0" class="panel-tip">{{ txp('profile_super_dict_empty') }}</p>
+          <div v-else class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ txp('profile_dict_type') }}</th>
+                  <th>{{ txp('profile_dict_value') }}</th>
+                  <th>{{ txp('profile_dict_name') }}</th>
+                  <th>{{ txp('profile_dict_lang') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in superDictList" :key="`${row.dictType}-${row.dictValue}-${row.lang}`">
+                  <td>{{ row.dictType || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.dictValue || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.dictName || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.lang || txp('profile_empty_dash') }}</td>
+                  <td class="op-cell">
+                    <button class="op-btn pass" @click="openSuperDictDialog(row)">{{ txp('profile_btn_update') }}</button>
+                    <button class="op-btn reject" @click="openSuperDictDeleteDialog(row)">{{ txp('profile_btn_delete') }}</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section v-if="role === 'manager' && managerActiveTab === MG_GOODS" class="panel">
+          <h3>{{ txp('profile_manager_tab_goods_list') }}</h3>
+          <div class="register-filter">
+            <label>
+              {{ txp('profile_col_category') }}
+              <select v-model="managerGoodsCategory" class="mini-input">
+                <option value="1">{{ txp('category_special') }}</option>
+                <option value="0">{{ txp('category_normal') }}</option>
+              </select>
+            </label>
+            <label>
+              {{ txp('profile_page') }}
+              <input v-model.number="managerGoodsPageNum" type="number" min="1" class="mini-input" />
+            </label>
+            <label>
+              {{ txp('profile_page_size') }}
+              <input v-model.number="managerGoodsPageSize" type="number" min="1" class="mini-input" />
+            </label>
+            <button class="btn ghost" @click="loadManagerGoodsList">{{ txp('profile_refresh') }}</button>
+          </div>
+          <p v-if="managerGoodsLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
+          <p v-else-if="managerGoodsError" class="panel-tip error">{{ managerGoodsError }}</p>
+          <p v-else-if="managerGoodsList.length === 0" class="panel-tip">{{ txp('profile_manager_goods_list_empty') }}</p>
+          <div v-else class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ txp('profile_merchant_id') }}</th>
+                  <th>{{ txp('profile_goods_id_col') }}</th>
+                  <th>{{ txp('profile_goods_name') }}</th>
+                  <th>{{ txp('profile_col_category') }}</th>
+                  <th>{{ txp('profile_price') }}</th>
+                  <th>{{ txp('profile_col_goods_type') }}</th>
+                  <th>{{ txp('profile_col_description') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in managerGoodsList" :key="row.goodsId">
+                  <td>{{ row.merchantId || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.goodsId || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.skuName || txp('profile_empty_dash') }}</td>
+                  <td>{{ categoryText(row.category) }}</td>
+                  <td>{{ row.price ?? txp('profile_empty_dash') }}</td>
+                  <td>{{ row.type || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.description || txp('profile_empty_dash') }}</td>
+                  <td class="op-cell">
+                    <button class="op-btn info" @click="goGoodsDetail(row)">{{ txp('profile_go_detail') }}</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section v-if="role === 'manager' && managerActiveTab === MG_QUERY" class="panel">
+          <h3>{{ txp('profile_manager_tab_goods_query') }}</h3>
+          <div class="register-filter">
+            <label>
+              {{ txp('profile_goods_id_col') }}
+              <input v-model="managerQueryGoodsId" type="text" class="mini-input goods-id-input" />
+            </label>
+            <button class="btn ghost" @click="loadManagerGoodsById">{{ txp('profile_query') }}</button>
+          </div>
+          <p v-if="managerQueryLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
+          <p v-else-if="managerQueryError" class="panel-tip error">{{ managerQueryError }}</p>
+          <div v-else-if="managerQueryResult" class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ txp('profile_merchant_id') }}</th>
+                  <th>{{ txp('profile_goods_id_col') }}</th>
+                  <th>{{ txp('profile_goods_name') }}</th>
+                  <th>{{ txp('profile_col_category') }}</th>
+                  <th>{{ txp('profile_price') }}</th>
+                  <th>{{ txp('profile_col_goods_type') }}</th>
+                  <th>{{ txp('profile_col_description') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>{{ managerQueryResult.merchantId || txp('profile_empty_dash') }}</td>
+                  <td>{{ managerQueryResult.goodsId || txp('profile_empty_dash') }}</td>
+                  <td>{{ managerQueryResult.skuName || txp('profile_empty_dash') }}</td>
+                  <td>{{ categoryText(managerQueryResult.category) }}</td>
+                  <td>{{ managerQueryResult.price ?? txp('profile_empty_dash') }}</td>
+                  <td>{{ managerQueryResult.type || txp('profile_empty_dash') }}</td>
+                  <td>{{ managerQueryResult.description || txp('profile_empty_dash') }}</td>
+                  <td class="op-cell">
+                    <button class="op-btn info" @click="goGoodsDetail(managerQueryResult)">{{ txp('profile_go_detail') }}</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section v-if="role === 'manager' && managerActiveTab === MG_TYPE" class="panel">
+          <div class="panel-head">
+            <h3>{{ txp('profile_manager_tab_type_list') }}</h3>
+            <button class="btn primary" @click="openManagerTypeDialog()">{{ txp('profile_manager_add_type') }}</button>
+          </div>
+          <div class="register-filter">
+            <label>
+              {{ txp('profile_page') }}
+              <input v-model.number="managerTypePageNum" type="number" min="1" class="mini-input" />
+            </label>
+            <label>
+              {{ txp('profile_page_size') }}
+              <input v-model.number="managerTypePageSize" type="number" min="1" class="mini-input" />
+            </label>
+            <button class="btn ghost" @click="loadManagerTypeList">{{ txp('profile_refresh') }}</button>
+          </div>
+          <p v-if="managerTypeLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
+          <p v-else-if="managerTypeError" class="panel-tip error">{{ managerTypeError }}</p>
+          <p v-else-if="managerTypeList.length === 0" class="panel-tip">{{ txp('profile_manager_type_empty') }}</p>
+          <div v-else class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ txp('profile_type_id_col') }}</th>
+                  <th>{{ txp('profile_type_name_col') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in managerTypeList" :key="row.typeId">
+                  <td>{{ row.typeId ?? txp('profile_empty_dash') }}</td>
+                  <td>{{ row.typeName || txp('profile_empty_dash') }}</td>
+                  <td class="op-cell">
+                    <button class="op-btn pass" @click="openManagerTypeDialog(row)">{{ txp('profile_btn_update') }}</button>
+                    <button class="op-btn reject" @click="removeManagerType(row)">{{ txp('profile_btn_delete') }}</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section v-if="role === 'manager' && managerActiveTab === MG_BRAND" class="panel">
+          <div class="panel-head">
+            <h3>{{ txp('profile_manager_tab_brand_list') }}</h3>
+            <button class="btn primary" @click="openManagerBrandDialog()">{{ txp('profile_manager_add_brand') }}</button>
+          </div>
+          <div class="register-filter">
+            <label>
+              {{ txp('profile_page') }}
+              <input v-model.number="managerBrandPageNum" type="number" min="1" class="mini-input" />
+            </label>
+            <label>
+              {{ txp('profile_page_size') }}
+              <input v-model.number="managerBrandPageSize" type="number" min="1" class="mini-input" />
+            </label>
+            <button class="btn ghost" @click="loadManagerBrandList">{{ txp('profile_refresh') }}</button>
+          </div>
+          <p v-if="managerBrandLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
+          <p v-else-if="managerBrandError" class="panel-tip error">{{ managerBrandError }}</p>
+          <p v-else-if="managerBrandList.length === 0" class="panel-tip">{{ txp('profile_manager_brand_empty') }}</p>
+          <div v-else class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ txp('profile_brand_id_col') }}</th>
+                  <th>{{ txp('profile_brand_name_col') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in managerBrandList" :key="row.id">
+                  <td>{{ row.brandId || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.brandName || txp('profile_empty_dash') }}</td>
+                  <td class="op-cell">
+                    <button class="op-btn pass" @click="openManagerBrandDialog(row)">{{ txp('profile_btn_update') }}</button>
+                    <button class="op-btn reject" @click="removeManagerBrand(row)">{{ txp('profile_btn_delete') }}</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
       </main>
     </div>
 
@@ -1127,6 +1997,18 @@ watch(
             class="btn ghost side-btn merchant-side-tab"
             :class="{ active: merchantActiveTab === item.key }"
             @click="setMerchantTab(item.key)"
+          >
+            {{ item.label }}
+          </button>
+        </div>
+        <div v-if="role === 'user'" class="merchant-side-tabs">
+          <button
+            v-for="item in userTabs"
+            :key="item.key"
+            type="button"
+            class="btn ghost side-btn merchant-side-tab"
+            :class="{ active: userActiveTab === item.key }"
+            @click="setUserTab(item.key)"
           >
             {{ item.label }}
           </button>
@@ -1165,7 +2047,47 @@ watch(
           <p class="merchant-edit-hint">{{ txp('profile_edit_hint') }}</p>
           <p v-if="merchantProfileTip" class="merchant-edit-msg">{{ merchantProfileTip }}</p>
           <p v-if="merchantProfileError" class="merchant-edit-msg error">{{ merchantProfileError }}</p>
-          <form class="merchant-edit-form" @submit.prevent="submitMerchantProfile">
+          <form class="merchant-edit-form" @submit.prevent="submitMallProfile">
+            <label class="merchant-field">
+              <span>{{ txp('profile_field_uid') }}</span>
+              <input type="text" class="merchant-input" :value="userId || txp('profile_empty_dash')" disabled />
+            </label>
+            <label class="merchant-field">
+              <span>{{ txp('profile_field_nickname') }}</span>
+              <input v-model="merchantProfileForm.nickname" type="text" class="merchant-input" autocomplete="nickname" />
+            </label>
+            <label class="merchant-field">
+              <span>{{ txp('profile_field_phone') }}</span>
+              <input v-model="merchantProfileForm.phone" type="text" class="merchant-input" autocomplete="tel" />
+            </label>
+            <label class="merchant-field">
+              <span>{{ txp('profile_field_city') }}</span>
+              <input v-model="merchantProfileForm.city" type="text" class="merchant-input" autocomplete="address-level2" />
+            </label>
+            <label class="merchant-field">
+              <span>{{ txp('profile_field_new_pw') }}</span>
+              <input
+                v-model="merchantProfileForm.password"
+                type="password"
+                class="merchant-input"
+                autocomplete="new-password"
+                :placeholder="txp('profile_pw_placeholder')"
+              />
+            </label>
+            <div class="merchant-edit-actions">
+              <button type="submit" class="btn primary" :disabled="merchantProfileSubmitting">
+                {{ merchantProfileSubmitting ? txp('profile_saving') : txp('profile_save_btn') }}
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section v-if="role === 'user' && userActiveTab === U_HOME" class="amazon-panel merchant-edit">
+          <h3>{{ txp('profile_edit_title') }}</h3>
+          <p class="merchant-edit-hint">{{ txp('profile_edit_hint') }}</p>
+          <p v-if="merchantProfileTip" class="merchant-edit-msg">{{ merchantProfileTip }}</p>
+          <p v-if="merchantProfileError" class="merchant-edit-msg error">{{ merchantProfileError }}</p>
+          <form class="merchant-edit-form" @submit.prevent="submitMallProfile">
             <label class="merchant-field">
               <span>{{ txp('profile_field_uid') }}</span>
               <input type="text" class="merchant-input" :value="userId || txp('profile_empty_dash')" disabled />
@@ -1324,6 +2246,128 @@ watch(
             </table>
           </div>
         </section>
+
+        <section v-if="role === 'user' && userActiveTab === U_CART" class="amazon-panel">
+          <div class="panel-head">
+            <h3>{{ txp('profile_user_tab_my_cart') }}</h3>
+            <div class="head-actions">
+              <button class="btn ghost" @click="router.push({ name: 'cart' })">{{ txp('profile_user_go_cart_page') }}</button>
+              <button class="btn primary" @click="setUserTab(U_ORDER)">{{ txp('profile_go_pay') }}</button>
+            </div>
+          </div>
+          <p v-if="userCartLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
+          <p v-else-if="userCartError" class="panel-tip error">{{ userCartError }}</p>
+          <p v-else-if="userCartList.length === 0" class="panel-tip">{{ txp('profile_user_cart_empty') }}</p>
+          <div v-else class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ txp('profile_goods_id_col') }}</th>
+                  <th>{{ txp('profile_goods_name') }}</th>
+                  <th>{{ txp('profile_sku_code') }}</th>
+                  <th>{{ txp('profile_price') }}</th>
+                  <th>{{ txp('profile_col_quantity') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in userCartList" :key="row.id || `${row.goodsId}-${row.skuCode || ''}`">
+                  <td>{{ row.goodsId || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.skuName || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.skuCode || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.price ?? txp('profile_empty_dash') }}</td>
+                  <td>{{ row.quantity ?? txp('profile_empty_dash') }}</td>
+                  <td class="op-cell">
+                    <button
+                      class="op-btn pass"
+                      :disabled="creatingCartOrderId === String(row.id)"
+                      @click="createOrderAndGoPay(row)"
+                    >
+                      {{ creatingCartOrderId === String(row.id) ? txp('profile_submitting') : txp('profile_go_pay') }}
+                    </button>
+                    <button class="op-btn info" @click="goGoodsDetail(row)">{{ txp('profile_go_detail') }}</button>
+                    <button
+                      class="op-btn reject"
+                      :disabled="deletingCartId === String(row.id)"
+                      @click="removeUserCartRow(row)"
+                    >
+                      {{ txp('profile_btn_delete') }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section v-if="role === 'user' && userActiveTab === U_ORDER" class="amazon-panel">
+          <h3>{{ txp('profile_user_tab_my_orders') }}</h3>
+          <div class="register-filter">
+            <label>
+              {{ txp('profile_page') }}
+              <input v-model.number="userOrderPageNum" type="number" min="1" class="mini-input" />
+            </label>
+            <label>
+              {{ txp('profile_page_size') }}
+              <input v-model.number="userOrderPageSize" type="number" min="1" class="mini-input" />
+            </label>
+            <button class="btn ghost" @click="loadUserOrderList">{{ txp('profile_refresh') }}</button>
+          </div>
+          <p v-if="userOrderTip" class="panel-tip">{{ userOrderTip }}</p>
+          <p v-if="userOrderLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
+          <p v-else-if="userOrderError" class="panel-tip error">{{ userOrderError }}</p>
+          <p v-else-if="userOrderList.length === 0" class="panel-tip">{{ txp('profile_user_order_empty') }}</p>
+          <div v-else class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ txp('profile_order_id_col') }}</th>
+                  <th>{{ txp('profile_transport_order_id_col') }}</th>
+                  <th>{{ txp('profile_goods_name') }}</th>
+                  <th>{{ txp('profile_price') }}</th>
+                  <th>{{ txp('profile_col_quantity') }}</th>
+                  <th>{{ txp('profile_col_pay_status') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in userOrderList" :key="row.orderId || row.id">
+                  <td>{{ row.orderId || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.transportOrderId || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.skuName || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.price ?? txp('profile_empty_dash') }}</td>
+                  <td>{{ row.quantity ?? txp('profile_empty_dash') }}</td>
+                  <td>{{ orderStatusText(row.status) }}</td>
+                  <td class="op-cell">
+                    <button
+                      v-if="canPayOrder(row)"
+                      class="op-btn pass"
+                      @click="payOrderRow(row)"
+                    >
+                      {{ txp('profile_go_pay') }}
+                    </button>
+                    <button
+                      v-if="canCancelOrder(row)"
+                      class="op-btn reject"
+                      :disabled="cancellingOrderId === row.orderId"
+                      @click="cancelOrderRow(row)"
+                    >
+                      {{ txp('profile_cancel') }}
+                    </button>
+                    <button
+                      v-if="canViewUserOrderLogistic(row)"
+                      class="op-btn info"
+                      @click="viewLogistic(row)"
+                    >
+                      {{ txp('profile_view_logistic') }}
+                    </button>
+                    <button class="op-btn info" @click="goGoodsDetail(row)">{{ txp('profile_go_detail') }}</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
       </main>
     </div>
 
@@ -1336,6 +2380,85 @@ watch(
         <button class="btn primary" @click="goLogin">{{ txp('profile_switch_account') }}</button>
       </div>
     </section>
+
+    <div v-if="managerCrudDialogVisible" class="dialog-mask" @click.self="closeManagerCrudDialog">
+      <div class="dialog-card">
+        <h3 class="dialog-title">
+          {{
+            managerCrudKind === 'type'
+              ? (managerCrudMode === 'edit' ? txp('profile_manager_type_edit_title') : txp('profile_manager_type_add_title'))
+              : (managerCrudMode === 'edit' ? txp('profile_manager_brand_edit_title') : txp('profile_manager_brand_add_title'))
+          }}
+        </h3>
+        <p v-if="managerCrudError" class="panel-tip error">{{ managerCrudError }}</p>
+        <div v-if="managerCrudKind === 'type'" class="dialog-grid">
+          <label>{{ txp('profile_type_name_col') }}<input v-model="managerCrudForm.typeName" class="dialog-input" /></label>
+        </div>
+        <div v-else class="dialog-grid">
+          <label>{{ txp('profile_brand_id_col') }}
+            <input v-model="managerCrudForm.brandId" class="dialog-input" :disabled="managerCrudMode === 'edit'" />
+          </label>
+          <label>{{ txp('profile_brand_name_col') }}<input v-model="managerCrudForm.brandName" class="dialog-input" /></label>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn ghost" @click="closeManagerCrudDialog">{{ txp('profile_cancel') }}</button>
+          <button class="btn primary" :disabled="managerCrudSubmitting" @click="submitManagerCrudDialog">
+            {{ managerCrudSubmitting ? txp('profile_submitting') : txp('profile_save') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="superDictDialogVisible" class="dialog-mask" @click.self="closeSuperDictDialog">
+      <div class="dialog-card">
+        <h3 class="dialog-title">
+          {{ superDictDialogMode === 'edit' ? txp('profile_super_dict_edit_title') : txp('profile_super_dict_add_title') }}
+        </h3>
+        <p v-if="superDictDialogError" class="panel-tip error">{{ superDictDialogError }}</p>
+        <div class="dialog-grid">
+          <label>{{ txp('profile_dict_type') }}<input v-model="superDictForm.dictType" class="dialog-input" :disabled="superDictDialogMode === 'edit'" /></label>
+          <label>{{ txp('profile_dict_value') }}<input v-model="superDictForm.dictValue" class="dialog-input" :disabled="superDictDialogMode === 'edit'" /></label>
+          <label>{{ txp('profile_dict_name') }}<input v-model="superDictForm.dictName" class="dialog-input" /></label>
+          <label>{{ txp('profile_dict_lang') }}
+            <select v-model="superDictForm.lang" class="dialog-input">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+            </select>
+          </label>
+          <label v-if="superDictDialogMode === 'add'">{{ txp('profile_dict_sort') }}<input v-model.number="superDictForm.sort" type="number" class="dialog-input" /></label>
+          <label v-if="superDictDialogMode === 'add'">{{ txp('profile_status') }}
+            <select v-model.number="superDictForm.status" class="dialog-input">
+              <option :value="1">{{ txp('user_enabled') }}</option>
+              <option :value="0">{{ txp('user_disabled') }}</option>
+            </select>
+          </label>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn ghost" @click="closeSuperDictDialog">{{ txp('profile_cancel') }}</button>
+          <button class="btn primary" :disabled="superDictSubmitting" @click="submitSuperDictDialog">
+            {{ superDictSubmitting ? txp('profile_submitting') : txp('profile_save') }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="superDictDeleteDialogVisible" class="dialog-mask" @click.self="closeSuperDictDeleteDialog">
+      <div class="dialog-card delete-card">
+        <h3 class="dialog-title">{{ txp('profile_super_dict_delete_title') }}</h3>
+        <p class="dialog-text">
+          {{ txp('profile_super_dict_delete_confirm') }}
+          <strong>{{ superDictDeleteTarget?.dictType }}/{{ superDictDeleteTarget?.dictValue }}/{{ superDictDeleteTarget?.lang }}</strong>
+        </p>
+        <p v-if="superDictDeleteError" class="panel-tip error">{{ superDictDeleteError }}</p>
+        <div class="dialog-actions">
+          <button class="btn ghost" @click="closeSuperDictDeleteDialog">{{ txp('profile_cancel') }}</button>
+          <button class="btn danger" :disabled="superDictDeleteSubmitting" @click="confirmSuperDictDelete">
+            {{ txp('profile_confirm_delete') }}
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div v-if="editDialogVisible" class="dialog-mask" @click.self="editDialogVisible = false">
       <div class="dialog-card">
@@ -1558,6 +2681,13 @@ watch(
   margin: 0;
 }
 
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .panel p {
   margin: 10px 0 0;
   color: var(--mall-text-muted);
@@ -1588,6 +2718,10 @@ watch(
   padding: 0 10px;
 }
 
+.goods-id-input {
+  width: 220px;
+}
+
 select.mini-input {
   width: 138px;
   padding-right: 34px;
@@ -1605,6 +2739,13 @@ select.mini-input {
 .table-wrap {
   margin-top: 12px;
   overflow: auto;
+}
+
+/* 字典列表使用独立滚动区域，避免依赖页面主滚动条 */
+.dict-table-wrap {
+  max-height: 420px;
+  overflow: auto;
+  padding-right: 4px;
 }
 
 .table {

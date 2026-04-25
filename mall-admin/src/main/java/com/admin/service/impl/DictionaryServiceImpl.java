@@ -48,8 +48,6 @@ public class DictionaryServiceImpl implements DictionaryService {
 
     @Override
     public List<DictionaryDto> getDictionaryList(String dictType) {
-        StpUtil.checkLogin();
-        StpUtil.checkPermission("manager");
         List<Dictionary> list = dictionaryDao.selectList(
                 new LambdaQueryWrapper<Dictionary>()
                         .eq(Dictionary::getDictType, dictType)

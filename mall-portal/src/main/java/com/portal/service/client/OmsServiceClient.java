@@ -13,15 +13,18 @@ public interface OmsServiceClient {
     @PostMapping("/oms/sys/addOrder")
     CommonResult<?> addOrder(@RequestBody OmsOrderDto omsOrderDto);
 
-    @PostMapping("/oms/payForOrder")
+    @PostMapping("/oms/sys/payForOrder")
     CommonResult<?> payForOrder(@RequestParam String orderId);
 
-    @PostMapping("/oms/cancelOrder")
+    @PostMapping("/oms/sys/cancelOrder")
     CommonResult<?> cancelOrder(@RequestParam String orderId);
 
-    @GetMapping("/oms/getOrder")
-    CommonResult<?> getOrder(@RequestParam int pageNum, @RequestParam int pageSize);
+    @GetMapping("/oms/sys/getOrderByUser")
+    CommonResult<?> getOrder(@RequestParam String userId, @RequestParam int pageNum, @RequestParam int pageSize);
 
     @GetMapping("/oms/sys/getOrderById")
     CommonResult<OmsOrderDto> getOrderById(@RequestParam String orderId);
+
+    @GetMapping("/oms/sys/getOrderPayDeadline")
+    CommonResult<?> getOrderPayDeadline(@RequestParam String orderId);
 }

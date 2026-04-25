@@ -1,6 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
+import { fetchUserCartList } from '@/api/portal'
 import MallLanguageDropdown from './MallLanguageDropdown.vue'
 import { useUiLang } from '@/composables/useUiLang.js'
 import { useMultiDictionary } from '@/composables/useMultiDictionary.js'
@@ -48,6 +49,37 @@ function logout() {
   localStorage.removeItem('city')
   router.push({ name: 'login' })
 }
+
+const cartBadgeCount = ref(0)
+
+async function refreshCartBadge() {
+  const userId = (localStorage.getItem('userId') || '').trim()
+  const r = (localStorage.getItem('role') || '').trim()
+  const token = (localStorage.getItem('satoken') || '').trim()
+  if (!token || !userId || (r && r !== 'user')) {
+    cartBadgeCount.value = 0
+    return
+  }
+  try {
+    const { ok, data } = await fetchUserCartList()
+    if (!ok || data?.code !== 200) {
+      cartBadgeCount.value = 0
+      return
+    }
+    const list = Array.isArray(data?.data) ? data.data : []
+    cartBadgeCount.value = list.length
+  } catch {
+    cartBadgeCount.value = 0
+  }
+}
+
+onMounted(() => {
+  refreshCartBadge()
+})
+
+router.afterEach(() => {
+  refreshCartBadge()
+})
 </script>
 
 <template>
@@ -106,8 +138,8 @@ function logout() {
         </form>
 
         <div class="main-actions">
-          <a class="cart" href="#" :aria-label="tx('header_cart')">
-            <span class="cart-count">0</span>
+          <RouterLink class="cart" :to="{ name: 'cart' }" :aria-label="tx('header_cart')">
+            <span v-if="cartBadgeCount > 0" class="cart-count">{{ cartBadgeCount > 99 ? '99+' : cartBadgeCount }}</span>
             <svg width="36" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
               <path d="M6 6h15l-1.5 9h-12z" />
               <circle cx="9" cy="20" r="1.5" fill="currentColor" stroke="none" />
@@ -115,7 +147,7 @@ function logout() {
               <path d="M6 6 5 3H2" />
             </svg>
             <span class="cart-label">{{ tx('header_cart') }}</span>
-          </a>
+          </RouterLink>
         </div>
       </div>
     </div>
@@ -369,6 +401,7 @@ function logout() {
   align-items: center;
   padding: 4px 10px;
   color: var(--mall-text);
+  text-decoration: none;
 }
 
 .cart:hover {

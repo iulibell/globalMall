@@ -11,14 +11,14 @@ function buildUrl(path, params = {}) {
 
 function buildAuthHeader() {
   const token = localStorage.getItem('satoken') || ''
-  const tokenHead = (localStorage.getItem('tokenHead') || 'Bearer ').trim()
   if (!token) {
     return {}
   }
-  const auth =
-    token.startsWith(`${tokenHead} `) || token.startsWith(`${tokenHead}`)
-      ? token
-      : `${tokenHead} ${token}`.trim()
+  const normalizedToken = String(token).replace(/^(Bearer|barrer)\s+/i, '').trim()
+  if (!normalizedToken) {
+    return {}
+  }
+  const auth = `Bearer ${normalizedToken}`
   return {
     Authorization: auth,
     satoken: auth,
@@ -78,6 +78,29 @@ export async function merchantUpdateInfo(payload) {
     delete body.password
   }
   const res = await fetch(buildUrl('/portal/merchant/updateInfo'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(body),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 用户修改资料（需 user 登录态） */
+export async function userUpdateInfo(payload) {
+  const body = { ...payload }
+  if (!body.password || String(body.password).trim() === '') {
+    delete body.password
+  }
+  const res = await fetch(buildUrl('/portal/user/updateInfo'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -203,9 +226,136 @@ export async function fetchMerchantPortalGoods(params = {}) {
   return { ok: res.ok, status: res.status, data }
 }
 
+/** 用户购物车列表（需 user 登录态，userId 由后端登录态确定） */
+export async function fetchUserCartList() {
+  const res = await fetch(buildUrl('/portal/user/cart/list'), {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
 /** 用户加入购物车（需 user 登录态） */
 export async function addUserCart(payload) {
   const res = await fetch(buildUrl('/portal/user/cart/add'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(payload),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 用户删除购物车商品（需 user 登录态） */
+export async function deleteUserCartItem(id) {
+  const res = await fetch(buildUrl('/portal/user/cart/delete', { id }), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 用户订单列表（需 user 登录态） */
+export async function fetchUserOrderList({ pageNum = 1, pageSize = 10 } = {}) {
+  const res = await fetch(buildUrl('/portal/user/order/list', { pageNum, pageSize }), {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 用户查询订单支付截止信息（需 user 登录态） */
+export async function fetchUserOrderPayDeadline(orderId) {
+  const res = await fetch(buildUrl('/portal/user/order/payDeadline', { orderId }), {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 用户支付订单（需 user 登录态） */
+export async function payUserOrder(orderId) {
+  const res = await fetch(buildUrl('/portal/user/order/pay', { orderId }), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 用户取消订单（需 user 登录态） */
+export async function cancelUserOrder(orderId) {
+  const res = await fetch(buildUrl('/portal/user/order/cancel', { orderId }), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 从购物车创建订单（需 user 登录态） */
+export async function createOrderFromCart(payload) {
+  const res = await fetch(buildUrl('/portal/user/order/createFromCart'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

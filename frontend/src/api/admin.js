@@ -11,13 +11,14 @@ function buildUrl(path, params = {}) {
 
 function buildAuthHeader() {
   const token = localStorage.getItem('satoken') || ''
-  const tokenHead = (localStorage.getItem('tokenHead') || 'Bearer ').trim()
   if (!token) {
     return {}
   }
-  const auth = token.startsWith(`${tokenHead} `) || token.startsWith(`${tokenHead}`)
-    ? token
-    : `${tokenHead} ${token}`.trim()
+  const normalizedToken = String(token).replace(/^(Bearer|barrer)\s+/i, '').trim()
+  if (!normalizedToken) {
+    return {}
+  }
+  const auth = `Bearer ${normalizedToken}`
   return {
     Authorization: auth,
     satoken: auth,
@@ -33,6 +34,185 @@ export async function fetchManagerPortalGoods({ pageNum = 1, pageSize = 10, cate
     }),
     {
       method: 'GET',
+      headers: {
+        ...buildAuthHeader(),
+      },
+    },
+  )
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+export async function fetchManagerPortalGoodsById(goodsId) {
+  const res = await fetch(
+    buildUrl('/admin/manager/getPortalGoodsById', {
+      goodsId,
+    }),
+    {
+      method: 'GET',
+      headers: {
+        ...buildAuthHeader(),
+      },
+    },
+  )
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+export async function fetchManagerGoodsTypes({ pageNum = 1, pageSize = 10 } = {}) {
+  const res = await fetch(
+    buildUrl('/admin/manager/getGoodsType', {
+      pageNum,
+      pageSize,
+    }),
+    {
+      method: 'GET',
+      headers: {
+        ...buildAuthHeader(),
+      },
+    },
+  )
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+export async function addManagerGoodsType(payload) {
+  const res = await fetch(buildUrl('/admin/manager/addGoodsType'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(payload || {}),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+export async function updateManagerGoodsType(payload) {
+  const res = await fetch(buildUrl('/admin/manager/updateGoodsType'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(payload || {}),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+export async function deleteManagerGoodsType(typeId) {
+  const res = await fetch(
+    buildUrl('/admin/manager/deleteGoodsType', {
+      typeId,
+    }),
+    {
+      method: 'POST',
+      headers: {
+        ...buildAuthHeader(),
+      },
+    },
+  )
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+export async function fetchManagerBrands({ pageNum = 1, pageSize = 10 } = {}) {
+  const res = await fetch(
+    buildUrl('/admin/manager/getBrand', {
+      pageNum,
+      pageSize,
+    }),
+    {
+      method: 'GET',
+      headers: {
+        ...buildAuthHeader(),
+      },
+    },
+  )
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+export async function addManagerBrand(payload) {
+  const res = await fetch(buildUrl('/admin/manager/addBrand'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(payload || {}),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+export async function updateManagerBrand(payload) {
+  const res = await fetch(buildUrl('/admin/manager/updateBrand'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(payload || {}),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+export async function deleteManagerBrand(id) {
+  const res = await fetch(
+    buildUrl('/admin/manager/deleteBrand', {
+      id,
+    }),
+    {
+      method: 'POST',
       headers: {
         ...buildAuthHeader(),
       },
@@ -257,6 +437,80 @@ export async function deleteSuperUser(userId) {
       },
     },
   )
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+export async function fetchSuperDictionaryList({ pageNum = 1, pageSize = 10 } = {}) {
+  const res = await fetch(
+    buildUrl('/admin/sys/super/getDictionary', { pageNum, pageSize }),
+    {
+      method: 'GET',
+      headers: {
+        ...buildAuthHeader(),
+      },
+    },
+  )
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+export async function addSuperDictionary(payload) {
+  const rows = Array.isArray(payload) ? payload : [payload]
+  const res = await fetch(buildUrl('/admin/sys/super/addDictionary'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(rows),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+export async function updateSuperDictionary(payload) {
+  const res = await fetch(buildUrl('/admin/sys/super/updateDictionary'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(payload || {}),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+export async function deleteSuperDictionary(payload) {
+  const res = await fetch(buildUrl('/admin/sys/super/deleteDictionary'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(payload || {}),
+  })
   let data = {}
   try {
     data = await res.json()

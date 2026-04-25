@@ -6,9 +6,11 @@ import com.admin.dto.PortalBrandDto;
 import com.admin.dto.PortalGoodsTypeDto;
 import com.admin.service.ManagerService;
 import com.admin.service.client.PortalServiceClient;
+import com.common.api.CommonResult;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -20,7 +22,7 @@ public class ManagerServiceImpl implements ManagerService {
     public List<PortalGoodsDto> getPortalGoods(int pageNum, int pageSize, short category) {
         StpUtil.checkLogin();
         StpUtil.checkPermission("manager");
-        return portalServiceClient.getRegularPortalGoods(pageNum,pageSize,category);
+        return portalServiceClient.getPortalGoods(pageNum,pageSize,category);
     }
 
     @Override
@@ -34,7 +36,8 @@ public class ManagerServiceImpl implements ManagerService {
     public List<PortalGoodsTypeDto> getGoodsType(int pageNum, int pageSize) {
         StpUtil.checkLogin();
         StpUtil.checkPermission("manager");
-        return portalServiceClient.getGoodsType(pageNum, pageSize);
+        CommonResult<List<PortalGoodsTypeDto>> result = portalServiceClient.getGoodsType(pageNum, pageSize);
+        return result != null && result.getData() != null ? result.getData() : Collections.emptyList();
     }
 
     @Override
@@ -62,7 +65,8 @@ public class ManagerServiceImpl implements ManagerService {
     public List<PortalBrandDto> getBrand(int pageNum, int pageSize) {
         StpUtil.checkLogin();
         StpUtil.checkPermission("manager");
-        return portalServiceClient.getBrand(pageNum, pageSize);
+        CommonResult<List<PortalBrandDto>> result = portalServiceClient.getBrand(pageNum, pageSize);
+        return result != null && result.getData() != null ? result.getData() : Collections.emptyList();
     }
 
     @Override

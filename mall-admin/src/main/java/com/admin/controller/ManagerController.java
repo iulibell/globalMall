@@ -26,8 +26,8 @@ public class ManagerController {
         return CommonResult.success(managerService.getPortalGoods(pageNum,pageSize,category));
     }
 
-    @GetMapping("/getPortalById")
-    public CommonResult<?> getPortalById(@RequestParam String goodsId){
+    @GetMapping("/getPortalGoodsById")
+    public CommonResult<?> getPortalGoodsById(@RequestParam String goodsId){
         return CommonResult.success(managerService.getPortalGoodsById(goodsId));
     }
 

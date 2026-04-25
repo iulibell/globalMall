@@ -4,9 +4,11 @@ import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
 import ProfileView from '@/views/ProfileView.vue'
 import GoodsDetailView from '@/views/GoodsDetailView.vue'
+import UserOrderPayView from '@/views/UserOrderPayView.vue'
 import MerchantApplyGoodsView from '@/views/MerchantApplyGoodsView.vue'
 import MerchantApplyPayView from '@/views/MerchantApplyPayView.vue'
 import SearchResultsView from '@/views/SearchResultsView.vue'
+import CartView from '@/views/CartView.vue'
 
 export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -27,6 +29,18 @@ export const router = createRouter({
       path: '/search',
       name: 'search',
       component: SearchResultsView,
+      meta: { layout: 'mall' },
+    },
+    {
+      path: '/cart',
+      name: 'cart',
+      component: CartView,
+      meta: { layout: 'mall' },
+    },
+    {
+      path: '/order/pay',
+      name: 'order-pay',
+      component: UserOrderPayView,
       meta: { layout: 'mall' },
     },
     {

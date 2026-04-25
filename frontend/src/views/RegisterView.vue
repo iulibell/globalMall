@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { register, sendRegisterCaptcha } from '@/api/systemAuth'
+import MallLanguageDropdown from '@/components/MallLanguageDropdown.vue'
 
 const username = ref('')
 const password = ref('')
@@ -95,6 +96,9 @@ async function onSubmit() {
 <template>
   <div class="auth-page">
     <div class="auth-card">
+      <div class="auth-topbar">
+        <MallLanguageDropdown />
+      </div>
       <RouterLink to="/" class="brand">
         <span class="logo-mark">GM</span>
         <span class="logo-text">Global<span class="accent">Mall</span></span>
@@ -180,6 +184,12 @@ async function onSubmit() {
   border: 1px solid var(--mall-border);
   border-radius: 12px;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+}
+
+.auth-topbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: -8px -6px 6px;
 }
 
 .brand {

@@ -5,6 +5,7 @@ import { login } from '@/api/systemAuth'
 import { useUiLang } from '@/composables/useUiLang.js'
 import { useMultiDictionary } from '@/composables/useMultiDictionary.js'
 import { pageDictFallback } from '@/utils/pageDictionaryFallback.js'
+import MallLanguageDropdown from '@/components/MallLanguageDropdown.vue'
 
 const router = useRouter()
 
@@ -74,6 +75,9 @@ async function onSubmit() {
 <template>
   <div class="auth-page">
     <div class="auth-card">
+      <div class="auth-topbar">
+        <MallLanguageDropdown />
+      </div>
       <RouterLink to="/" class="brand">
         <span class="logo-mark">GM</span>
         <span class="logo-text">Global<span class="accent">Mall</span></span>
@@ -93,7 +97,7 @@ async function onSubmit() {
         <label class="field">
           <span class="label">{{ tx('login_role_label') }}</span>
           <select v-model="requiredRoleKey" class="input select" required>
-            <option v-for="r in roles" :key="r.value" :value="r.value">{{ r.label }}（{{ r.value }}）</option>
+            <option v-for="r in roles" :key="r.value" :value="r.value">{{ r.label }}</option>
           </select>
         </label>
 
@@ -131,6 +135,12 @@ async function onSubmit() {
   border: 1px solid var(--mall-border);
   border-radius: 12px;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
+}
+
+.auth-topbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: -8px -6px 6px;
 }
 
 .brand {

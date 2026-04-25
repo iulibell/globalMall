@@ -22,4 +22,7 @@ public interface WmsServiceClient {
     @GetMapping("/wms/getAvailableWarehouse")
     List<WmsWarehouseDto> getAvailableWarehouse(@RequestParam(defaultValue = "1")int pageNum,
                                                 @RequestParam(defaultValue = "10")int pageSize);
+
+    @GetMapping("/wms/sys/getWarehouseById")
+    CommonResult<WmsWarehouseDto> getWarehouseById(@RequestParam Long warehouseId);
 }

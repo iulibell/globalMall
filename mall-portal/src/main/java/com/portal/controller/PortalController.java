@@ -28,8 +28,8 @@ public class PortalController {
         return CommonResult.success(portalService.getPortalGoodsById(goodsId));
     }
 
-    @GetMapping("/manager/getPortalGoodsByCategory")
-    public List<PortalGoodsDto> getRegularPortalGoods(@RequestParam(defaultValue = "1")int pageNum,
+    @GetMapping("/manager/getGoodsByCategory")
+    public List<PortalGoodsDto> getPortalGoods(@RequestParam(defaultValue = "1")int pageNum,
                                                       @RequestParam(defaultValue = "10")int pageSize,
                                                       @RequestParam Short category){
         return portalService.getPortalGoodsByCategory(pageNum, pageSize, category);

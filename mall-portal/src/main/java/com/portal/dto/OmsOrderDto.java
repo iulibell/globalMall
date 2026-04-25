@@ -5,6 +5,7 @@ import lombok.Data;
 import jakarta.validation.constraints.NotBlank;
 
 import java.math.BigDecimal;
+import java.util.Date;
 
 @Data
 public class OmsOrderDto {
@@ -40,5 +41,9 @@ public class OmsOrderDto {
     private Integer quantity;
     @NotBlank(message = "oms_v_type")
     private String type;
+    private Short status;
     private String remark;
+    private String transportOrderId;
+    private Date createTime;
+    private Date updateTime;
 }

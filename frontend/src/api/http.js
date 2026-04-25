@@ -1,14 +1,14 @@
 /**
  * 与 globalLogistic 前端一致：相对路径请求网关代理的 mall-admin / mall-portal 等。
- * 鉴权头与 portal 一致使用 localStorage `satoken`（及可选 `tokenHead`）。
+ * 鉴权头与后端 sa-token.token-prefix 对齐，统一发送 `Bearer <token>`。
  */
 function satokenHeaderValue(raw) {
   if (raw == null || typeof raw !== 'string') return ''
   const t = raw.trim()
   if (!t) return ''
-  const tokenHead = (typeof localStorage !== 'undefined' ? localStorage.getItem('tokenHead') : null) || 'Bearer '
-  const head = String(tokenHead).trim()
-  return /^Bearer\s/i.test(t) || t.startsWith(head) ? t : `${head} ${t}`.trim()
+  const token = t.replace(/^(Bearer|barrer)\s+/i, '').trim()
+  if (!token) return ''
+  return `Bearer ${token}`
 }
 
 function buildHeaders({ auth }) {

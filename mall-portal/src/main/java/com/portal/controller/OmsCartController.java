@@ -26,36 +26,37 @@ public class OmsCartController {
 
     @PostMapping("/updateQuantity")
     public CommonResult<?> updateQuantity(@RequestParam Long id,
-                                          @RequestParam String userId,
                                           @RequestParam Integer quantity) {
-        omsCartService.updateQuantity(id, userId, quantity);
+        omsCartService.updateQuantity(id, quantity);
         return CommonResult.success("数量更新成功");
     }
 
     @PostMapping("/check")
     public CommonResult<?> check(@RequestParam Long id,
-                                 @RequestParam String userId,
                                  @RequestParam Short checked) {
-        omsCartService.checkCart(id, userId, checked);
+        omsCartService.checkCart(id, checked);
         return CommonResult.success("勾选状态更新成功");
     }
 
     @PostMapping("/checkAll")
-    public CommonResult<?> checkAll(@RequestParam String userId,
-                                    @RequestParam Short checked) {
-        omsCartService.checkAll(userId, checked);
+    public CommonResult<?> checkAll(@RequestParam Short checked) {
+        omsCartService.checkAll(checked);
         return CommonResult.success("全选状态更新成功");
     }
 
     @PostMapping("/delete")
-    public CommonResult<?> delete(@RequestParam Long id,
-                                  @RequestParam String userId) {
-        omsCartService.deleteCart(id, userId);
+    public CommonResult<?> delete(@RequestParam Long id) {
+        omsCartService.deleteCart(id);
         return CommonResult.success("删除成功");
     }
 
     @GetMapping("/list")
-    public CommonResult<?> list(@RequestParam String userId) {
-        return CommonResult.success(omsCartService.listCart(userId));
+    public CommonResult<?> list() {
+        return CommonResult.success(omsCartService.listCart());
+    }
+
+    @GetMapping("/settlePreview")
+    public CommonResult<?> settlePreview() {
+        return CommonResult.success(omsCartService.settlePreview());
     }
 }

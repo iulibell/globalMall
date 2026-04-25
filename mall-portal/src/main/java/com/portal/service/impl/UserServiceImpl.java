@@ -1,21 +1,30 @@
 package com.portal.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.common.api.CommonResult;
-import com.common.constant.RedisConstant;
 import com.common.exception.Assert;
 import com.common.api.ResultCode;
 import com.common.constant.PortalConstant;
+import com.portal.dao.OmsCartDao;
+import com.portal.dao.PortalGoodsDao;
+import com.portal.dto.CreateOrderFromCartRequest;
 import com.portal.dto.OmsOrderDto;
+import com.portal.dto.SysUserInfoDto;
+import com.portal.entity.OmsCart;
+import com.portal.entity.PortalGoods;
 import com.portal.service.OmsCartService;
 import com.portal.service.UserService;
 import com.portal.service.client.OmsServiceClient;
+import com.portal.service.client.SystemServiceClient;
+import com.portal.service.client.WmsServiceClient;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -23,6 +32,14 @@ public class UserServiceImpl implements UserService {
     private OmsServiceClient omsServiceClient;
     @Resource
     private OmsCartService omsCartService;
+    @Resource
+    private OmsCartDao omsCartDao;
+    @Resource
+    private PortalGoodsDao portalGoodsDao;
+    @Resource
+    private SystemServiceClient systemServiceClient;
+    @Resource
+    private WmsServiceClient wmsServiceClient;
 
     @Override
     public CommonResult<?> addOrder(OmsOrderDto omsOrderDto) {
@@ -41,21 +58,93 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public CommonResult<?> payForOrder(String orderId, String userId) {
+    public CommonResult<?> createOrderFromCart(CreateOrderFromCartRequest request) {
         StpUtil.checkLogin();
         StpUtil.checkPermission("user");
+        String loginUserId = StpUtil.getLoginIdAsString();
+        OmsCart cart = omsCartDao.selectOne(new LambdaQueryWrapper<OmsCart>()
+                .eq(OmsCart::getId, request.getCartId())
+                .eq(OmsCart::getUserId, loginUserId)
+                .eq(OmsCart::getDeleted, (short) 0));
+        if (cart == null) {
+            Assert.fail("购物车商品不存在");
+        }
+        PortalGoods goods = portalGoodsDao.selectOne(new LambdaQueryWrapper<PortalGoods>()
+                .eq(PortalGoods::getGoodsId, cart.getGoodsId())
+                .eq(PortalGoods::getStatus, (short) 1));
+        if (goods == null) {
+            Assert.fail("商品不存在或不可下单");
+        }
+        if (goods.getWarehouseId() == null || goods.getLocationId() == null) {
+            Assert.fail("商品仓储信息不完整，暂无法下单");
+        }
+        OmsOrderDto order = new OmsOrderDto();
+        order.setOrderId(UUID.randomUUID().toString().replace("-", ""));
+        order.setMerchantId(cart.getMerchantId());
+        order.setUserId(loginUserId);
+        order.setGoodsId(cart.getGoodsId());
+        order.setWarehouseId(goods.getWarehouseId());
+        order.setLocationId(goods.getLocationId());
+        order.setSkuName(cart.getSkuName());
+        order.setSkuCode((cart.getSkuCode() == null || cart.getSkuCode().isBlank()) ? "DEFAULT" : cart.getSkuCode());
+        order.setPrice(cart.getPrice() == null ? BigDecimal.ZERO : cart.getPrice());
+        order.setUserPhone(request.getUserPhone().trim());
+        // 当前门户侧无商家手机号来源，先使用兜底值避免阻断下单。
+        order.setMerchantPhone(request.getUserPhone().trim());
+        order.setCity(request.getCity().trim());
+        CommonResult<com.portal.dto.WmsWarehouseDto> warehouseRes = executeWithRetry(
+                () -> wmsServiceClient.getWarehouseById(goods.getWarehouseId()),
+                "查询仓库信息失败，请稍后重试");
+        String warehouseCity = warehouseRes == null || warehouseRes.getData() == null
+                ? null
+                : warehouseRes.getData().getCity();
+        if (warehouseCity == null || warehouseCity.trim().isEmpty()) {
+            Assert.fail("仓库城市信息缺失，暂无法创建订单");
+        }
+        order.setWarehouseCity(warehouseCity.trim());
+        order.setCategory(goods.getCategory() == null ? (short) 0 : goods.getCategory());
+        order.setQuantity(cart.getQuantity() == null || cart.getQuantity() <= 0 ? 1 : cart.getQuantity());
+        order.setType((goods.getType() == null || goods.getType().isBlank()) ? "normal" : goods.getType());
+        CommonResult<?> result = addOrder(order);
+        if (result == null || result.getCode() != ResultCode.SUCCESS.getCode()) {
+            return result;
+        }
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("orderId", order.getOrderId());
+        CommonResult<?> deadlineResult = executeWithRetry(
+                () -> omsServiceClient.getOrderPayDeadline(order.getOrderId()),
+                "查询订单支付截止时间失败，请稍后重试");
+        Object deadlinePayload = deadlineResult == null ? null : deadlineResult.getData();
+        if (deadlinePayload instanceof Map<?, ?> deadlineMap) {
+            payload.put("expireAt", deadlineMap.get("expireAt"));
+            payload.put("remainingSeconds", deadlineMap.get("remainingSeconds"));
+        }
+        payload.put("message", result.getMessage());
+        return CommonResult.success(payload);
+    }
+
+    @Override
+    public CommonResult<?> payForOrder(String orderId) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
+        String loginUserId = StpUtil.getLoginIdAsString();
         CommonResult<OmsOrderDto> orderDetail = executeWithRetry(
                 () -> omsServiceClient.getOrderById(orderId),
                 "查询订单失败，请稍后重试");
+        if (orderDetail == null || orderDetail.getData() == null) {
+            Assert.fail("订单不存在");
+        }
+        OmsOrderDto order = orderDetail.getData();
+        if (order.getUserId() == null || !loginUserId.equals(order.getUserId())) {
+            Assert.fail("无权操作该订单");
+        }
         CommonResult<?> result = executeWithRetry(
                 () -> omsServiceClient.payForOrder(orderId),
                 "支付处理失败，请稍后重试");
         if (result != null
                 && result.getCode() == ResultCode.SUCCESS.getCode()
-                && orderDetail != null
-                && orderDetail.getData() != null) {
-            OmsOrderDto order = orderDetail.getData();
-            String targetUserId = order.getUserId() == null ? userId : order.getUserId();
+                && order != null) {
+            String targetUserId = order.getUserId() == null ? loginUserId : order.getUserId();
             omsCartService.clearBoughtCart(targetUserId, order.getGoodsId(), order.getSkuCode());
         }
         return result;
@@ -65,6 +154,17 @@ public class UserServiceImpl implements UserService {
     public CommonResult<?> cancelOrder(String orderId) {
         StpUtil.checkLogin();
         StpUtil.checkPermission("user");
+        String loginUserId = StpUtil.getLoginIdAsString();
+        CommonResult<OmsOrderDto> orderDetail = executeWithRetry(
+                () -> omsServiceClient.getOrderById(orderId),
+                "查询订单失败，请稍后重试");
+        if (orderDetail == null || orderDetail.getData() == null) {
+            Assert.fail("订单不存在");
+        }
+        OmsOrderDto order = orderDetail.getData();
+        if (order.getUserId() == null || !loginUserId.equals(order.getUserId())) {
+            Assert.fail("无权操作该订单");
+        }
         return omsServiceClient.cancelOrder(orderId);
     }
 
@@ -72,14 +172,53 @@ public class UserServiceImpl implements UserService {
     public CommonResult<?> getOrder(int pageNum, int pageSize) {
         StpUtil.checkLogin();
         StpUtil.checkPermission("user");
-        return omsServiceClient.getOrder(pageNum, pageSize);
+        String loginUserId = StpUtil.getLoginIdAsString();
+        return omsServiceClient.getOrder(loginUserId, pageNum, pageSize);
     }
 
     @Override
     public CommonResult<?> getOrderById(String orderId) {
         StpUtil.checkLogin();
         StpUtil.checkPermission("user");
-        return omsServiceClient.getOrderById(orderId);
+        CommonResult<OmsOrderDto> result = omsServiceClient.getOrderById(orderId);
+        OmsOrderDto order = result == null ? null : result.getData();
+        if (order == null) {
+            Assert.fail("订单不存在");
+        }
+        String loginUserId = StpUtil.getLoginIdAsString();
+        if (order.getUserId() == null || !loginUserId.equals(order.getUserId())) {
+            Assert.fail("无权查看该订单");
+        }
+        return result;
+    }
+
+    @Override
+    public CommonResult<?> getOrderPayDeadline(String orderId) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
+        String loginUserId = StpUtil.getLoginIdAsString();
+        CommonResult<OmsOrderDto> orderDetail = executeWithRetry(
+                () -> omsServiceClient.getOrderById(orderId),
+                "查询订单失败，请稍后重试");
+        if (orderDetail == null || orderDetail.getData() == null) {
+            Assert.fail("订单不存在");
+        }
+        OmsOrderDto order = orderDetail.getData();
+        if (order.getUserId() == null || !loginUserId.equals(order.getUserId())) {
+            Assert.fail("无权操作该订单");
+        }
+        return executeWithRetry(
+                () -> omsServiceClient.getOrderPayDeadline(orderId),
+                "查询订单支付截止时间失败，请稍后重试");
+    }
+
+    @Override
+    public void updateInfo(SysUserInfoDto sysUserInfoDto) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
+        String loginUserId = StpUtil.getLoginIdAsString();
+        sysUserInfoDto.setUserId(loginUserId);
+        systemServiceClient.updateInfo(sysUserInfoDto);
     }
 
     private <T> CommonResult<T> executeWithRetry(RemoteCall<T> remoteCall, String failMessage) {
