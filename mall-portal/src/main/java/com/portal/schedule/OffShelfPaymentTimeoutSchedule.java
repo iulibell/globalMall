@@ -20,14 +20,14 @@ public class OffShelfPaymentTimeoutSchedule {
     private MerchantService merchantService;
 
     /**
-     * 每 10 分钟扫描一次未支付下架申请，超过配置时效自动标记超时。
+     * 每 30 分钟扫描一次「待支付」下架申请，自进入待支付起的时效内未支付则标记超时。
      */
-    @Scheduled(cron = "0 */10 * * * ?")
+    @Scheduled(cron = "0 */30 * * * ?")
     public void markOffShelfTimeout() {
         Date deadline = new Date(System.currentTimeMillis() - RedisConstant.OFF_SHELF_PAY_EXPIRE * 3600_000L);
         List<PortalOffShelf> timeoutList = portalOffShelfDao.selectList(new LambdaQueryWrapper<PortalOffShelf>()
-                .eq(PortalOffShelf::getStatus, (short) 0)
-                .le(PortalOffShelf::getCreateTime, deadline));
+                .eq(PortalOffShelf::getStatus, (short) 1)
+                .le(PortalOffShelf::getUpdateTime, deadline));
         for (PortalOffShelf offShelf : timeoutList) {
             merchantService.markOffShelfPaymentTimeout(offShelf.getId());
         }

@@ -16,6 +16,8 @@ function tx(key) {
 const props = defineProps({
   title: { type: String, required: true },
   price: { type: String, required: true },
+  originPrice: { type: String, default: '' },
+  seckill: { type: Boolean, default: false },
   badge: { type: String, default: '' },
   imageUrl: { type: String, default: '' },
   imageTone: { type: String, default: 'a' },
@@ -130,6 +132,9 @@ async function onAddToCart() {
       <p class="price">
         <span class="currency">¥</span>{{ price }}
       </p>
+      <p v-if="seckill && originPrice" class="origin-price">
+        原价 ¥{{ originPrice }}
+      </p>
       <p v-if="cartTip" class="cart-tip">{{ cartTip }}</p>
       <p v-if="cartError" class="cart-tip error">{{ cartError }}</p>
       <button type="button" class="add" :disabled="addingCart" @click.stop="onAddToCart">
@@ -233,6 +238,13 @@ async function onAddToCart() {
   font-size: 1.15rem;
   font-weight: 700;
   color: var(--mall-orange-bright);
+}
+
+.origin-price {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--mall-text-muted);
+  text-decoration: line-through;
 }
 
 .currency {

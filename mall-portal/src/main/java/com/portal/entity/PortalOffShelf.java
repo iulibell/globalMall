@@ -27,7 +27,10 @@ public class PortalOffShelf {
     @Size(max = 10)
     @Schema(description = "所支付的下架处理费用与运费")
     private BigDecimal fee;
-    @Schema(description = "状态:0->未支付(默认),1->已支付,2->超时未支付,3->下架完成")
+    @Size(max = 255)
+    @Schema(description = "关联物流运输单号")
+    private String transportOrderId;
+    @Schema(description = "状态:0->待审核,1->待支付,2->已支付,3->超时未支付,4->下架完成")
     private Short status;
     private Date createTime;
     private Date updateTime;

@@ -1,6 +1,7 @@
 package com.portal.controller;
 
 import com.common.api.CommonResult;
+import com.portal.dto.CreateDirectOrderRequest;
 import com.portal.dto.CreateOrderFromCartRequest;
 import com.portal.dto.OmsOrderDto;
 import com.portal.dto.SysUserInfoDto;
@@ -23,6 +24,11 @@ public class UserController {
     @PostMapping("/order/createFromCart")
     public CommonResult<?> createOrderFromCart(@Valid @RequestBody CreateOrderFromCartRequest request){
         return userService.createOrderFromCart(request);
+    }
+
+    @PostMapping("/order/createDirect")
+    public CommonResult<?> createOrderDirect(@Valid @RequestBody CreateDirectOrderRequest request){
+        return userService.createOrderDirect(request);
     }
 
     @PostMapping("/order/pay")

@@ -3,8 +3,7 @@ package com.portal.service;
 import com.common.api.CommonResult;
 import com.portal.dto.PortalGoodsDto;
 import com.portal.dto.PortalGoodsNeededDto;
-import com.portal.entity.PortalGoods;
-import org.springframework.web.bind.annotation.RequestParam;
+import com.portal.dto.PortalOffShelfSysDto;
 
 import java.util.List;
 
@@ -40,11 +39,28 @@ public interface PortalService {
     boolean markOffShelfCompleted(Long offShelfId);
 
     /**
+     * 物流 WMS（仓管 keeper）经 Feign 拉取：状态为「待审核」的下架申请分页列表。
+     */
+    List<PortalOffShelfSysDto> listOffShelfPendingForSys(int pageNum, int pageSize);
+
+    /**
+     * 物流侧回写下架申请关联运输单号（TMS）。
+     */
+    boolean bindOffShelfTransportOrderId(Long offShelfId, String transportOrderId);
+
+    /**
      *点击商品后获取单个商品详细信息
      * @param goodsId 商品id
      * @return 单个商品
      */
     PortalGoodsDto getGoodsDetail(String goodsId);
+
+    /**
+     * 批量获取商品详情（含秒杀实时价格修正）
+     * @param goodsIds 商品id列表
+     * @return 商品详情列表
+     */
+    List<PortalGoodsDto> getGoodsDetailBatch(List<String> goodsIds);
 
     /**
      * 获取热门商品列表

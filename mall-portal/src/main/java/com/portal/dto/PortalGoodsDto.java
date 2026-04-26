@@ -20,6 +20,10 @@ public class PortalGoodsDto {
     private Short category;
     @NotBlank(message = "价格不能为空")
     private BigDecimal price;
+    private BigDecimal originPrice;
+    private BigDecimal seckillPrice;
+    private Boolean seckill;
+    private String seckillActivityCode;
     @NotBlank(message = "商品类型不能为空")
     private String type;
     private Short status;

@@ -9,6 +9,8 @@ import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+
 @RestController
 @RequestMapping("/portal/merchant")
 public class MerchantController {
@@ -34,15 +36,31 @@ public class MerchantController {
     }
 
     @PostMapping("/applyForOffShelf")
-    public CommonResult<?> applyForOffShelf(@RequestParam String goodsId){
-        merchantService.applyForOffShelf(goodsId);
-        return CommonResult.success("下架申请已提交，请在时效内完成支付");
+    public CommonResult<?> applyForOffShelf(@RequestParam String goodsId,
+                                            @RequestParam String city){
+        merchantService.applyForOffShelf(goodsId, city);
+        return CommonResult.success("下架申请已提交，状态为待审核；审核员核定费用后可支付");
+    }
+
+    /**
+     * 兼容：商城审核员核定费用。主流程为物流仓管在 logi-wms「商城下架待审核」中核定（经 /portal/sys/setOffShelfFee）。
+     */
+    @PostMapping("/reviewer/setOffShelfFee")
+    public CommonResult<?> setOffShelfFee(@RequestParam Long offShelfId,
+                                          @RequestParam BigDecimal fee){
+        return CommonResult.success(merchantService.setOffShelfFeeByReviewer(offShelfId, fee));
     }
 
     @PostMapping("/payForOffShelf")
     public CommonResult<?> payForOffShelf(@Valid @RequestBody PortalOffShelfPayDto portalOffShelfPayDto){
         merchantService.payForOffShelf(portalOffShelfPayDto);
-        return CommonResult.success("下架费用支付成功，物流出库单已创建");
+        return CommonResult.successMsg("下架费用支付成功，物流出库单已创建");
+    }
+
+    @GetMapping("/getOffShelfList")
+    public CommonResult<?> getOffShelfList(@RequestParam(defaultValue = "1") int pageNum,
+                                           @RequestParam(defaultValue = "10") int pageSize){
+        return CommonResult.success(merchantService.getOffShelfList(pageNum, pageSize));
     }
 
     @PostMapping("/sys/markOffShelfPaymentTimeout")

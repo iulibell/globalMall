@@ -33,7 +33,11 @@ import {
   cancelUserOrder,
   createOrderFromCart,
   deleteUserCartItem,
+  fetchMerchantSeckillActivities,
+  launchSeckillActivity,
   fetchMerchantPortalGoods,
+  fetchMerchantOffShelfList,
+  merchantApplySeckillActivity,
   fetchUserOrderList,
   fetchUserCartList,
   userUpdateInfo,
@@ -53,13 +57,18 @@ const S_USERS = 's_users'
 const S_TYPE = 's_type'
 const S_ID = 's_id'
 const S_DICT = 's_dict'
+const S_ACTIVITY = 's_activity'
+const SUPER_SECKILL_PLAN_STORAGE_KEY = 'super-seckill-plan'
 const MG_GOODS = 'mg_goods'
 const MG_QUERY = 'mg_query'
 const MG_TYPE = 'mg_type'
 const MG_BRAND = 'mg_brand'
 const M_OVER = 'm_overview'
+const M_APPLY_SHELF = 'm_apply_shelf'
 const M_APPLY_LIST = 'm_apply_list'
 const M_MY_GOODS = 'm_my_goods'
+const M_OFF_SHELF = 'm_off_shelf'
+const M_ACTIVITY_APPLY = 'm_activity_apply'
 const U_HOME = 'u_home'
 const U_ORDER = 'u_order'
 const U_CART = 'u_cart'
@@ -124,6 +133,7 @@ const superTabs = computed(() => [
   { key: S_TYPE, label: txp('profile_super_tab_type') },
   { key: S_ID, label: txp('profile_super_tab_id') },
   { key: S_DICT, label: txp('profile_super_tab_dict') },
+  { key: S_ACTIVITY, label: txp('profile_super_tab_launch_activity') },
 ])
 
 const managerTabs = computed(() => [
@@ -143,6 +153,9 @@ const adminSidebarItems = computed(() => {
 
 const merchantTabs = computed(() => [
   { key: M_OVER, label: txp('profile_merchant_overview') },
+  { key: M_APPLY_SHELF, label: txp('profile_apply_shelf_title') },
+  { key: M_ACTIVITY_APPLY, label: txp('profile_merchant_activity_apply') },
+  { key: M_OFF_SHELF, label: txp('profile_off_shelf_title') },
   { key: M_APPLY_LIST, label: txp('profile_merchant_apply_list') },
   { key: M_MY_GOODS, label: txp('profile_merchant_my_goods') },
 ])
@@ -189,6 +202,7 @@ const superDictDeleteDialogVisible = ref(false)
 const superDictDeleteSubmitting = ref(false)
 const superDictDialogError = ref('')
 const superDictDeleteError = ref('')
+const superSeckillTip = ref('')
 const superDictForm = ref({
   dictType: '',
   dictValue: '',
@@ -198,6 +212,13 @@ const superDictForm = ref({
   status: 1,
 })
 const superDictDeleteTarget = ref(null)
+const superSeckillForm = ref({
+  activityName: '',
+  startTime: '',
+  endTime: '',
+})
+const superSeckillStartInputRef = ref(null)
+const superSeckillEndInputRef = ref(null)
 const editDialogVisible = ref(false)
 const editSubmitting = ref(false)
 const editForm = ref({
@@ -226,11 +247,35 @@ const offShelfGoodsId = ref('')
 const offShelfSubmitting = ref(false)
 const offShelfTip = ref('')
 const offShelfError = ref('')
+const offShelfConfirmVisible = ref(false)
+const offShelfConfirmLoading = ref(false)
+const offShelfConfirmError = ref('')
+const offShelfConfirmSnapshot = ref({ goodsId: '', city: '', row: null })
+const offShelfListLoading = ref(false)
+const offShelfListError = ref('')
+const offShelfList = ref([])
+const offShelfPageNum = ref(1)
+const offShelfPageSize = ref(10)
 const merchantApplyListLoading = ref(false)
 const merchantApplyListError = ref('')
 const merchantApplyList = ref([])
 const merchantApplyListPageNum = ref(1)
 const merchantApplyListPageSize = ref(10)
+const merchantSeckillSubmitting = ref(false)
+const merchantSeckillTip = ref('')
+const merchantSeckillError = ref('')
+const merchantSeckillListLoading = ref(false)
+const merchantSeckillListError = ref('')
+const merchantSeckillList = ref([])
+const merchantSeckillPageNum = ref(1)
+const merchantSeckillPageSize = ref(10)
+const merchantSeckillForm = ref({
+  goodsId: '',
+  seckillPrice: '',
+  totalStock: 1,
+  perUserLimit: 1,
+  remark: '',
+})
 const merchantGoodsListLoading = ref(false)
 const merchantGoodsListError = ref('')
 const merchantGoodsList = ref([])
@@ -357,38 +402,283 @@ async function submitMallProfile() {
   }
 }
 
-async function submitOffShelfApply() {
+const offShelfConfirmImageSrc = computed(() => {
+  const pic = String(offShelfConfirmSnapshot.value.row?.picture || '').trim()
+  if (!pic) return ''
+  if (/^https?:\/\//i.test(pic) || /^data:/i.test(pic)) return pic
+  return `/src/assets/picture/${encodeURIComponent(pic)}`
+})
+
+async function resolveOffShelfGoodsRow(goodsId) {
+  const gid = String(goodsId || '').trim()
+  if (!gid) return null
+  const local = merchantGoodsList.value.find((r) => String(r?.goodsId || '').trim() === gid)
+  if (local) return local
+  const merchantId = (userId.value || '').trim()
+  if (!merchantId) return null
+  try {
+    const { ok, data } = await fetchMerchantPortalGoods({
+      pageNum: 1,
+      pageSize: 200,
+      merchantId,
+    })
+    if (!ok || data?.code !== 200) return null
+    const list = Array.isArray(data?.data) ? data.data : []
+    return list.find((r) => String(r?.goodsId || '').trim() === gid) || null
+  } catch {
+    return null
+  }
+}
+
+function closeOffShelfConfirm() {
+  offShelfConfirmVisible.value = false
+  offShelfConfirmError.value = ''
+}
+
+async function onOffShelfFormSubmit() {
   const goodsId = offShelfGoodsId.value.trim()
+  const city = String(mallSessionCity.value || merchantProfileForm.value.city || '').trim()
   if (!goodsId) {
     offShelfError.value = txp('profile_off_shelf_need_id')
+    return
+  }
+  if (!city) {
+    offShelfError.value = txp('profile_off_shelf_city_required')
+    return
+  }
+  offShelfError.value = ''
+  offShelfConfirmError.value = ''
+  offShelfConfirmLoading.value = true
+  try {
+    const row = await resolveOffShelfGoodsRow(goodsId)
+    offShelfConfirmSnapshot.value = { goodsId, city, row }
+    offShelfConfirmVisible.value = true
+  } finally {
+    offShelfConfirmLoading.value = false
+  }
+}
+
+async function submitOffShelfApply() {
+  const { goodsId, city } = offShelfConfirmSnapshot.value
+  if (!goodsId || !city) {
+    closeOffShelfConfirm()
     return
   }
   offShelfSubmitting.value = true
   offShelfTip.value = ''
   offShelfError.value = ''
+  offShelfConfirmError.value = ''
   try {
-    const { ok, data } = await merchantApplyForOffShelf(goodsId)
+    const { ok, data } = await merchantApplyForOffShelf(goodsId, city)
     if (!ok || data?.code !== 200) {
-      offShelfError.value = data?.message || txp('profile_off_shelf_fail')
+      offShelfConfirmError.value = data?.message || txp('profile_off_shelf_fail')
       return
     }
     offShelfTip.value = typeof data?.data === 'string' ? data.data : data?.message || txp('profile_off_shelf_ok')
     offShelfGoodsId.value = ''
+    closeOffShelfConfirm()
+    await loadMerchantOffShelfList()
   } catch {
-    offShelfError.value = txp('profile_net_portal')
+    offShelfConfirmError.value = txp('profile_net_portal')
   } finally {
     offShelfSubmitting.value = false
   }
 }
 
+function offShelfStatusText(status) {
+  const s = Number(status)
+  if (s === 0) return txp('reg_pending')
+  if (s === 1) return txp('pay_pending')
+  if (s === 2) return txp('pay_paid')
+  if (s === 3) return txp('pay_timeout')
+  if (s === 4) return txp('profile_off_shelf_done')
+  return txp('status_unknown')
+}
+
+function canPayOffShelf(row) {
+  const fee = Number(row?.fee ?? Number.NaN)
+  return Number(row?.status) === 1 && Number.isFinite(fee) && fee > 0
+}
+
+function canViewOffShelfLogistic(row) {
+  return Number(row?.status) >= 2 && String(row?.transportOrderId || '').trim() !== ''
+}
+
+/** 下架申请「操作」列：不可支付时的说明（勿用 profile_reviewed，易与审核通过混淆） */
+function offShelfActionPlaceholder(row) {
+  const s = Number(row?.status)
+  if (s === 0) return txp('profile_off_shelf_op_wait_reviewer')
+  if (s === 1) {
+    const fee = Number(row?.fee ?? Number.NaN)
+    if (!Number.isFinite(fee) || fee <= 0) return txp('profile_off_shelf_op_wait_fee')
+  }
+  if (s === 2) return txp('pay_paid')
+  if (s === 3) return txp('pay_timeout')
+  if (s === 4) return txp('profile_off_shelf_done')
+  return txp('profile_empty_dash')
+}
+
+async function loadMerchantOffShelfList() {
+  offShelfListLoading.value = true
+  offShelfListError.value = ''
+  try {
+    const { ok, data } = await fetchMerchantOffShelfList({
+      pageNum: offShelfPageNum.value,
+      pageSize: offShelfPageSize.value,
+    })
+    if (!ok || data?.code !== 200) {
+      offShelfList.value = []
+      offShelfListError.value = data?.message || txp('profile_off_shelf_list_fail')
+      return
+    }
+    offShelfList.value = Array.isArray(data?.data) ? data.data : []
+  } catch {
+    offShelfList.value = []
+    offShelfListError.value = txp('profile_net_portal')
+  } finally {
+    offShelfListLoading.value = false
+  }
+}
+
+async function payOffShelfRow(row) {
+  const offShelfId = row?.id
+  if (offShelfId == null) return
+  const fee = Number(row?.fee ?? Number.NaN)
+  if (!Number.isFinite(fee) || fee <= 0 || Number(row?.status) !== 1) {
+    offShelfListError.value = txp('profile_off_shelf_fee_invalid')
+    return
+  }
+  sessionStorage.setItem('merchant_off_shelf_pay_row', JSON.stringify(row))
+  router.push({
+    name: 'merchant-off-shelf-pay',
+    query: { offShelfId: String(offShelfId) },
+  })
+}
+
 function setMerchantTab(key) {
   merchantActiveTab.value = key
+  if (key === M_ACTIVITY_APPLY) {
+    loadMerchantSeckillActivities()
+    return
+  }
   if (key === M_APPLY_LIST) {
     loadMerchantApplyList()
     return
   }
   if (key === M_MY_GOODS) {
     loadMerchantGoodsList()
+  }
+}
+
+function seckillStatusText(v) {
+  const s = Number(v)
+  if (s === 1) return '待审核'
+  if (s === 2) return '未过审'
+  if (s === 3) return '已过审'
+  return txp('status_unknown')
+}
+
+function datetimeLocalToIso(v) {
+  const raw = String(v || '').trim()
+  if (!raw) return ''
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toISOString()
+}
+
+function getSuperSeckillPlanWindow() {
+  try {
+    const raw = window.localStorage.getItem(SUPER_SECKILL_PLAN_STORAGE_KEY)
+    if (!raw) return { activityName: '', startTime: '', endTime: '' }
+    const plan = JSON.parse(raw)
+    return {
+      activityName: String(plan?.activityName || '').trim(),
+      startTime: datetimeLocalToIso(plan?.startTime),
+      endTime: datetimeLocalToIso(plan?.endTime),
+    }
+  } catch {
+    return { activityName: '', startTime: '', endTime: '' }
+  }
+}
+
+async function submitMerchantSeckillApply() {
+  const planWindow = getSuperSeckillPlanWindow()
+  const payload = {
+    goodsId: String(merchantSeckillForm.value.goodsId || '').trim(),
+    activityName: planWindow.activityName,
+    seckillPrice: Number(merchantSeckillForm.value.seckillPrice),
+    totalStock: Number(merchantSeckillForm.value.totalStock),
+    perUserLimit: Number(merchantSeckillForm.value.perUserLimit),
+    startTime: planWindow.startTime,
+    endTime: planWindow.endTime,
+    remark: String(merchantSeckillForm.value.remark || '').trim(),
+  }
+  if (!payload.activityName || !payload.startTime || !payload.endTime) {
+    merchantSeckillError.value = txp('profile_merchant_activity_window_missing')
+    return
+  }
+  if (!payload.goodsId || !payload.startTime || !payload.endTime
+      || !Number.isFinite(payload.seckillPrice) || payload.seckillPrice <= 0
+      || !Number.isFinite(payload.totalStock) || payload.totalStock <= 0
+      || !Number.isFinite(payload.perUserLimit) || payload.perUserLimit <= 0) {
+    merchantSeckillError.value = txp('profile_merchant_activity_required')
+    return
+  }
+  if (new Date(payload.startTime).getTime() >= new Date(payload.endTime).getTime()) {
+    merchantSeckillError.value = txp('profile_super_activity_time_invalid')
+    return
+  }
+  const nowTs = Date.now()
+  const startTs = new Date(payload.startTime).getTime()
+  const endTs = new Date(payload.endTime).getTime()
+  if (nowTs < startTs || nowTs >= endTs) {
+    merchantSeckillError.value = txp('profile_merchant_activity_not_in_window')
+    return
+  }
+  merchantSeckillSubmitting.value = true
+  merchantSeckillTip.value = ''
+  merchantSeckillError.value = ''
+  try {
+    const { ok, data } = await merchantApplySeckillActivity(payload)
+    if (!ok || data?.code !== 200) {
+      merchantSeckillError.value = data?.message || txp('profile_merchant_activity_apply_fail')
+      return
+    }
+    merchantSeckillTip.value = data?.message || txp('profile_merchant_activity_apply_ok')
+    merchantSeckillForm.value = {
+      goodsId: '',
+      seckillPrice: '',
+      totalStock: 1,
+      perUserLimit: 1,
+      remark: '',
+    }
+    await loadMerchantSeckillActivities()
+  } catch {
+    merchantSeckillError.value = txp('profile_net_portal')
+  } finally {
+    merchantSeckillSubmitting.value = false
+  }
+}
+
+async function loadMerchantSeckillActivities() {
+  merchantSeckillListLoading.value = true
+  merchantSeckillListError.value = ''
+  try {
+    const { ok, data } = await fetchMerchantSeckillActivities({
+      pageNum: merchantSeckillPageNum.value,
+      pageSize: merchantSeckillPageSize.value,
+    })
+    if (!ok || data?.code !== 200) {
+      merchantSeckillList.value = []
+      merchantSeckillListError.value = data?.message || txp('profile_merchant_activity_list_fail')
+      return
+    }
+    merchantSeckillList.value = Array.isArray(data?.data) ? data.data : []
+  } catch {
+    merchantSeckillList.value = []
+    merchantSeckillListError.value = txp('profile_net_portal')
+  } finally {
+    merchantSeckillListLoading.value = false
   }
 }
 
@@ -455,7 +745,10 @@ async function loadMerchantApplyList() {
 }
 
 function portalGoodsStatusText(v) {
-  return Number(v) === 1 ? txp('portal_on_shelf') : txp('portal_off_shelf')
+  const s = Number(v)
+  if (s === 1) return txp('portal_on_shelf')
+  if (s === 2) return txp('portal_removed')
+  return txp('portal_off_shelf')
 }
 
 function canViewGoodsDetail(row) {
@@ -470,6 +763,28 @@ function goGoodsDetail(row) {
 
 function categoryText(v) {
   return Number(v) === 1 ? txp('category_special') : txp('category_normal')
+}
+
+function goodsTypeText(v) {
+  const raw = String(v ?? '').trim()
+  if (!raw) return txp('profile_empty_dash')
+  const matched = managerTypeList.value.find((item) => String(item?.typeId) === raw)
+  if (matched?.typeName) return matched.typeName
+  const asNum = Number(raw)
+  if (!Number.isNaN(asNum)) return txp('profile_empty_dash')
+  return raw
+}
+
+async function ensureManagerTypeLookup() {
+  if (managerTypeList.value.length > 0) return
+  try {
+    const { ok, data } = await fetchManagerGoodsTypes({ pageNum: 1, pageSize: 200 })
+    if (ok && data?.code === 200 && Array.isArray(data?.data)) {
+      managerTypeList.value = data.data
+    }
+  } catch {
+    // ignore: fallback handled by goodsTypeText
+  }
 }
 
 async function loadMerchantGoodsList() {
@@ -662,6 +977,7 @@ async function loadManagerGoodsList() {
   managerGoodsLoading.value = true
   managerGoodsError.value = ''
   try {
+    await ensureManagerTypeLookup()
     const category = Number(managerGoodsCategory.value)
     const { ok, data } = await fetchManagerPortalGoods({
       pageNum: managerGoodsPageNum.value,
@@ -692,6 +1008,7 @@ async function loadManagerGoodsById() {
   managerQueryLoading.value = true
   managerQueryError.value = ''
   try {
+    await ensureManagerTypeLookup()
     const { ok, data } = await fetchManagerPortalGoodsById(goodsId)
     if (!ok || data?.code !== 200) {
       managerQueryResult.value = null
@@ -1228,6 +1545,58 @@ async function confirmSuperDictDelete() {
   }
 }
 
+function loadSuperSeckillPlan() {
+  try {
+    const raw = window.localStorage.getItem(SUPER_SECKILL_PLAN_STORAGE_KEY)
+    if (!raw) return
+    const plan = JSON.parse(raw)
+    superSeckillForm.value = {
+      activityName: String(plan?.activityName || ''),
+      startTime: String(plan?.startTime || ''),
+      endTime: String(plan?.endTime || ''),
+    }
+  } catch {
+    // ignore parse/storage errors, keep defaults
+  }
+}
+
+function openSuperSeckillPicker(kind) {
+  const target = kind === 'start' ? superSeckillStartInputRef.value : superSeckillEndInputRef.value
+  if (!target || typeof target.showPicker !== 'function') return
+  try {
+    target.showPicker()
+  } catch {
+    // ignore browsers that block programmatic picker open
+  }
+}
+
+async function saveSuperSeckillPlan() {
+  const payload = {
+    activityName: String(superSeckillForm.value.activityName || '').trim(),
+    startTime: String(superSeckillForm.value.startTime || '').trim(),
+    endTime: String(superSeckillForm.value.endTime || '').trim(),
+  }
+  if (!payload.activityName || !payload.startTime || !payload.endTime) {
+    superSeckillTip.value = txp('profile_super_activity_required')
+    return
+  }
+  if (new Date(payload.startTime).getTime() >= new Date(payload.endTime).getTime()) {
+    superSeckillTip.value = txp('profile_super_activity_time_invalid')
+    return
+  }
+  try {
+    const { ok, data } = await launchSeckillActivity(payload)
+    if (!ok || data?.code !== 200) {
+      superSeckillTip.value = data?.message || txp('profile_action_fail')
+      return
+    }
+    window.localStorage.setItem(SUPER_SECKILL_PLAN_STORAGE_KEY, JSON.stringify(payload))
+    superSeckillTip.value = txp('profile_super_activity_saved')
+  } catch {
+    superSeckillTip.value = txp('profile_net_portal')
+  }
+}
+
 function openEditDialog(row) {
   editForm.value = {
     userId: row.userId == null ? '' : String(row.userId),
@@ -1298,6 +1667,8 @@ async function reloadSuperCurrentTab() {
     await loadSuperUserById()
   } else if (superActiveTab.value === S_DICT) {
     await loadSuperDictionaryList()
+  } else if (superActiveTab.value === S_ACTIVITY) {
+    loadSuperSeckillPlan()
   }
 }
 
@@ -1361,6 +1732,8 @@ watch(
       superError.value = ''
     } else if (tab === S_DICT) {
       loadSuperDictionaryList()
+    } else if (tab === S_ACTIVITY) {
+      loadSuperSeckillPlan()
     }
   },
 )
@@ -1417,8 +1790,16 @@ onMounted(() => {
 watch(
   () => merchantActiveTab.value,
   (tab) => {
+    if (role.value === 'merchant' && tab === M_ACTIVITY_APPLY) {
+      loadMerchantSeckillActivities()
+      return
+    }
     if (role.value === 'merchant' && tab === M_APPLY_LIST) {
       loadMerchantApplyList()
+      return
+    }
+    if (role.value === 'merchant' && tab === M_OFF_SHELF) {
+      loadMerchantOffShelfList()
       return
     }
     if (role.value === 'merchant' && tab === M_MY_GOODS) {
@@ -1798,6 +2179,44 @@ watch(
           </div>
         </section>
 
+        <section v-if="role === 'super' && superActiveTab === S_ACTIVITY" class="panel">
+          <h3>{{ txp('profile_super_tab_launch_activity') }}</h3>
+          <p class="panel-tip">{{ txp('profile_super_launch_activity_hint') }}</p>
+          <p v-if="superSeckillTip" class="merchant-edit-msg">{{ superSeckillTip }}</p>
+          <p class="panel-tip">{{ txp('profile_super_launch_activity_flow') }}</p>
+          <form class="merchant-edit-form" @submit.prevent="saveSuperSeckillPlan">
+            <label class="merchant-field">
+              <span>{{ txp('profile_super_activity_name') }}</span>
+              <input v-model="superSeckillForm.activityName" type="text" class="merchant-input" autocomplete="off" />
+            </label>
+            <label class="merchant-field">
+              <span>{{ txp('profile_super_activity_start') }}</span>
+              <input
+                ref="superSeckillStartInputRef"
+                v-model="superSeckillForm.startTime"
+                type="datetime-local"
+                class="merchant-input"
+                @click="openSuperSeckillPicker('start')"
+                @focus="openSuperSeckillPicker('start')"
+              />
+            </label>
+            <label class="merchant-field">
+              <span>{{ txp('profile_super_activity_end') }}</span>
+              <input
+                ref="superSeckillEndInputRef"
+                v-model="superSeckillForm.endTime"
+                type="datetime-local"
+                class="merchant-input"
+                @click="openSuperSeckillPicker('end')"
+                @focus="openSuperSeckillPicker('end')"
+              />
+            </label>
+            <div class="merchant-edit-actions">
+              <button type="submit" class="btn primary">{{ txp('profile_super_save_activity_plan') }}</button>
+            </div>
+          </form>
+        </section>
+
         <section v-if="role === 'manager' && managerActiveTab === MG_GOODS" class="panel">
           <h3>{{ txp('profile_manager_tab_goods_list') }}</h3>
           <div class="register-filter">
@@ -1842,7 +2261,7 @@ watch(
                   <td>{{ row.skuName || txp('profile_empty_dash') }}</td>
                   <td>{{ categoryText(row.category) }}</td>
                   <td>{{ row.price ?? txp('profile_empty_dash') }}</td>
-                  <td>{{ row.type || txp('profile_empty_dash') }}</td>
+                  <td>{{ goodsTypeText(row.type) }}</td>
                   <td>{{ row.description || txp('profile_empty_dash') }}</td>
                   <td class="op-cell">
                     <button class="op-btn info" @click="goGoodsDetail(row)">{{ txp('profile_go_detail') }}</button>
@@ -1885,7 +2304,7 @@ watch(
                   <td>{{ managerQueryResult.skuName || txp('profile_empty_dash') }}</td>
                   <td>{{ categoryText(managerQueryResult.category) }}</td>
                   <td>{{ managerQueryResult.price ?? txp('profile_empty_dash') }}</td>
-                  <td>{{ managerQueryResult.type || txp('profile_empty_dash') }}</td>
+                  <td>{{ goodsTypeText(managerQueryResult.type) }}</td>
                   <td>{{ managerQueryResult.description || txp('profile_empty_dash') }}</td>
                   <td class="op-cell">
                     <button class="op-btn info" @click="goGoodsDetail(managerQueryResult)">{{ txp('profile_go_detail') }}</button>
@@ -2122,7 +2541,7 @@ watch(
           </form>
         </section>
 
-        <section v-if="role === 'merchant' && merchantActiveTab === M_OVER" class="amazon-panel merchant-apply-entry">
+        <section v-if="role === 'merchant' && merchantActiveTab === M_APPLY_SHELF" class="amazon-panel merchant-apply-entry">
           <h3>{{ txp('profile_apply_shelf_title') }}</h3>
           <p class="merchant-edit-hint">{{ txp('profile_apply_shelf_hint') }}</p>
           <button type="button" class="btn primary merchant-apply-btn" @click="router.push({ name: 'merchant-apply-goods' })">
@@ -2130,12 +2549,83 @@ watch(
           </button>
         </section>
 
-        <section v-if="role === 'merchant' && merchantActiveTab === M_OVER" class="amazon-panel merchant-off-shelf-entry">
+        <section v-if="role === 'merchant' && merchantActiveTab === M_ACTIVITY_APPLY" class="amazon-panel merchant-apply-entry">
+          <h3>{{ txp('profile_merchant_activity_apply') }}</h3>
+          <p class="merchant-edit-hint">{{ txp('profile_merchant_activity_hint') }}</p>
+          <p v-if="merchantSeckillTip" class="merchant-edit-msg">{{ merchantSeckillTip }}</p>
+          <p v-if="merchantSeckillError" class="merchant-edit-msg error">{{ merchantSeckillError }}</p>
+          <form class="merchant-edit-form" @submit.prevent="submitMerchantSeckillApply">
+            <label class="merchant-field">
+              <span>{{ txp('profile_field_goods_id') }}</span>
+              <input v-model="merchantSeckillForm.goodsId" type="text" class="merchant-input" autocomplete="off" />
+            </label>
+            <label class="merchant-field">
+              <span>{{ txp('profile_price') }}</span>
+              <input v-model="merchantSeckillForm.seckillPrice" type="number" min="0.01" step="0.01" class="merchant-input" />
+            </label>
+            <label class="merchant-field">
+              <span>{{ txp('profile_merchant_activity_stock') }}</span>
+              <input v-model.number="merchantSeckillForm.totalStock" type="number" min="1" class="merchant-input" />
+            </label>
+            <label class="merchant-field">
+              <span>{{ txp('profile_merchant_activity_limit') }}</span>
+              <input v-model.number="merchantSeckillForm.perUserLimit" type="number" min="1" class="merchant-input" />
+            </label>
+            <label class="merchant-field" style="grid-column: 1 / -1;">
+              <span>{{ txp('profile_col_description') }}</span>
+              <input v-model="merchantSeckillForm.remark" type="text" class="merchant-input" autocomplete="off" />
+            </label>
+            <div class="merchant-edit-actions" style="grid-column: 1 / -1;">
+              <button type="submit" class="btn primary" :disabled="merchantSeckillSubmitting">
+                {{ merchantSeckillSubmitting ? txp('profile_submitting') : txp('profile_merchant_activity_apply_submit') }}
+              </button>
+            </div>
+          </form>
+
+          <div class="register-filter merchant-activity-toolbar">
+            <label>
+              {{ txp('profile_page') }}
+              <input v-model.number="merchantSeckillPageNum" type="number" min="1" class="mini-input" />
+            </label>
+            <label>
+              {{ txp('profile_page_size') }}
+              <input v-model.number="merchantSeckillPageSize" type="number" min="1" class="mini-input" />
+            </label>
+            <button class="btn ghost" @click="loadMerchantSeckillActivities">{{ txp('profile_refresh') }}</button>
+          </div>
+          <p v-if="merchantSeckillListLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
+          <p v-else-if="merchantSeckillListError" class="panel-tip error">{{ merchantSeckillListError }}</p>
+          <p v-else-if="merchantSeckillList.length === 0" class="panel-tip">{{ txp('profile_merchant_activity_empty') }}</p>
+          <div v-else class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>活动编码</th>
+                  <th>{{ txp('profile_field_goods_id') }}</th>
+                  <th>{{ txp('profile_super_activity_name') }}</th>
+                  <th>{{ txp('profile_price') }}</th>
+                  <th>{{ txp('profile_status') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in merchantSeckillList" :key="row.activityCode || row.id">
+                  <td>{{ row.activityCode || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.goodsId || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.activityName || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.seckillPrice ?? txp('profile_empty_dash') }}</td>
+                  <td>{{ seckillStatusText(row.status) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section v-if="role === 'merchant' && merchantActiveTab === M_OFF_SHELF" class="amazon-panel merchant-off-shelf-entry">
           <h3>{{ txp('profile_off_shelf_title') }}</h3>
           <p class="merchant-edit-hint">{{ txp('profile_off_shelf_hint') }}</p>
           <p v-if="offShelfTip" class="merchant-edit-msg">{{ offShelfTip }}</p>
           <p v-if="offShelfError" class="merchant-edit-msg error">{{ offShelfError }}</p>
-          <form class="merchant-edit-form merchant-off-shelf-form" @submit.prevent="submitOffShelfApply">
+          <form class="merchant-edit-form merchant-off-shelf-form" @submit.prevent="onOffShelfFormSubmit">
             <label class="merchant-field">
               <span>{{ txp('profile_field_goods_id') }}</span>
               <input
@@ -2147,11 +2637,69 @@ watch(
               />
             </label>
             <div class="merchant-edit-actions">
-              <button type="submit" class="btn primary" :disabled="offShelfSubmitting">
-                {{ offShelfSubmitting ? txp('profile_submitting') : txp('profile_off_shelf_submit') }}
+              <button type="submit" class="btn primary" :disabled="offShelfSubmitting || offShelfConfirmLoading">
+                {{
+                  offShelfConfirmLoading
+                    ? txp('profile_loading')
+                    : offShelfSubmitting
+                      ? txp('profile_submitting')
+                      : txp('profile_off_shelf_submit')
+                }}
               </button>
             </div>
           </form>
+          <div class="register-filter off-shelf-list-toolbar">
+            <label>
+              {{ txp('profile_page') }}
+              <input v-model.number="offShelfPageNum" type="number" min="1" class="mini-input" />
+            </label>
+            <label>
+              {{ txp('profile_page_size') }}
+              <input v-model.number="offShelfPageSize" type="number" min="1" class="mini-input" />
+            </label>
+            <button class="btn ghost" @click="loadMerchantOffShelfList">{{ txp('profile_refresh') }}</button>
+          </div>
+          <p v-if="offShelfListLoading" class="panel-tip">{{ txp('profile_loading') }}</p>
+          <p v-else-if="offShelfListError" class="panel-tip error">{{ offShelfListError }}</p>
+          <p v-else-if="offShelfList.length === 0" class="panel-tip">{{ txp('profile_off_shelf_list_empty') }}</p>
+          <div v-else class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>{{ txp('profile_off_shelf_id_col') }}</th>
+                  <th>{{ txp('profile_goods_id_col') }}</th>
+                  <th>{{ txp('profile_transport_order_id_col') }}</th>
+                  <th>{{ txp('profile_field_city') }}</th>
+                  <th>{{ txp('profile_price') }}</th>
+                  <th>{{ txp('profile_status') }}</th>
+                  <th>{{ txp('profile_col_actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in offShelfList" :key="row.id">
+                  <td>{{ row.id ?? txp('profile_empty_dash') }}</td>
+                  <td>{{ row.goodsId || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.transportOrderId || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.city || txp('profile_empty_dash') }}</td>
+                  <td>{{ row.fee ?? txp('profile_empty_dash') }}</td>
+                  <td>{{ offShelfStatusText(row.status) }}</td>
+                  <td class="op-cell">
+                    <button
+                      v-if="canPayOffShelf(row)"
+                      class="op-btn pass"
+                      @click="payOffShelfRow(row)"
+                    >
+                      {{ txp('profile_go_pay') }}
+                    </button>
+                    <button v-else-if="canViewOffShelfLogistic(row)" class="op-btn info" @click="viewLogistic(row)">
+                      {{ txp('profile_view_logistic') }}
+                    </button>
+                    <span v-else class="reviewed-tag">{{ offShelfActionPlaceholder(row) }}</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
 
         <section v-if="role === 'merchant' && merchantActiveTab === M_APPLY_LIST" class="amazon-panel">
@@ -2380,6 +2928,60 @@ watch(
         <button class="btn primary" @click="goLogin">{{ txp('profile_switch_account') }}</button>
       </div>
     </section>
+
+    <div v-if="offShelfConfirmVisible" class="dialog-mask" @click.self="closeOffShelfConfirm">
+      <div class="dialog-card off-shelf-confirm-card">
+        <h3 class="dialog-title">{{ txp('profile_off_shelf_confirm_title') }}</h3>
+        <p class="dialog-text">{{ txp('profile_off_shelf_confirm_hint') }}</p>
+        <p v-if="offShelfConfirmError" class="panel-tip error">{{ offShelfConfirmError }}</p>
+        <div v-if="offShelfConfirmSnapshot.row" class="off-shelf-confirm-layout">
+          <div v-if="offShelfConfirmImageSrc" class="off-shelf-confirm-thumb">
+            <img :src="offShelfConfirmImageSrc" :alt="String(offShelfConfirmSnapshot.row.skuName || '')" />
+          </div>
+          <div class="off-shelf-confirm-fields">
+            <p>
+              <span class="off-shelf-confirm-label">{{ txp('profile_field_goods_id') }}</span>
+              {{ offShelfConfirmSnapshot.row.goodsId || txp('profile_empty_dash') }}
+            </p>
+            <p>
+              <span class="off-shelf-confirm-label">{{ txp('profile_goods_name') }}</span>
+              {{ offShelfConfirmSnapshot.row.skuName || txp('profile_empty_dash') }}
+            </p>
+            <p>
+              <span class="off-shelf-confirm-label">{{ txp('profile_sku_code') }}</span>
+              {{ offShelfConfirmSnapshot.row.skuCode || txp('profile_empty_dash') }}
+            </p>
+            <p>
+              <span class="off-shelf-confirm-label">{{ txp('profile_price') }}</span>
+              {{ offShelfConfirmSnapshot.row.price ?? txp('profile_empty_dash') }}
+            </p>
+            <p>
+              <span class="off-shelf-confirm-label">{{ txp('profile_col_category') }}</span>
+              {{ categoryText(offShelfConfirmSnapshot.row.category) }}
+            </p>
+            <p>
+              <span class="off-shelf-confirm-label">{{ txp('profile_status') }}</span>
+              {{ portalGoodsStatusText(offShelfConfirmSnapshot.row.status) }}
+            </p>
+          </div>
+        </div>
+        <div v-else class="off-shelf-confirm-minimal">
+          <p class="dialog-text">{{ txp('profile_off_shelf_confirm_no_detail') }}</p>
+          <p class="off-shelf-confirm-line">
+            <span class="off-shelf-confirm-label">{{ txp('profile_field_goods_id') }}</span>
+            {{ offShelfConfirmSnapshot.goodsId }}
+          </p>
+        </div>
+        <div class="dialog-actions">
+          <button type="button" class="btn ghost" :disabled="offShelfSubmitting" @click="closeOffShelfConfirm">
+            {{ txp('profile_off_shelf_confirm_cancel') }}
+          </button>
+          <button type="button" class="btn primary" :disabled="offShelfSubmitting" @click="submitOffShelfApply">
+            {{ offShelfSubmitting ? txp('profile_submitting') : txp('profile_off_shelf_confirm_ok') }}
+          </button>
+        </div>
+      </div>
+    </div>
 
     <div v-if="managerCrudDialogVisible" class="dialog-mask" @click.self="closeManagerCrudDialog">
       <div class="dialog-card">
@@ -2738,14 +3340,37 @@ select.mini-input {
 
 .table-wrap {
   margin-top: 12px;
-  overflow: auto;
+  max-height: 420px;
+  overflow-y: auto;
+  overflow-x: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 170, 26, 0.85) rgba(255, 255, 255, 0.08);
 }
 
 /* 字典列表使用独立滚动区域，避免依赖页面主滚动条 */
 .dict-table-wrap {
-  max-height: 420px;
-  overflow: auto;
-  padding-right: 4px;
+  max-height: 520px;
+}
+
+.table-wrap::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.table-wrap::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+}
+
+.table-wrap::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(255, 196, 85, 0.95), rgba(255, 140, 0, 0.9));
+  border-radius: 999px;
+  border: 2px solid rgba(22, 22, 30, 0.9);
+}
+
+.table-wrap::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(255, 211, 122, 0.98), rgba(255, 153, 51, 0.95));
 }
 
 .table {
@@ -2989,6 +3614,22 @@ select.mini-input {
   grid-template-columns: minmax(240px, 420px);
 }
 
+.merchant-off-shelf-form .merchant-edit-actions {
+  margin-bottom: 4px;
+}
+
+.merchant-off-shelf-entry .off-shelf-list-toolbar {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #2a2a34;
+}
+
+.merchant-activity-toolbar {
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid #2a2a34;
+}
+
 .amazon-card p {
   color: #dedee6;
 }
@@ -3026,6 +3667,50 @@ select.mini-input {
   justify-content: center;
   z-index: 90;
   padding: 16px;
+}
+
+.off-shelf-confirm-card {
+  width: min(640px, 100%);
+}
+
+.off-shelf-confirm-layout {
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+  align-items: flex-start;
+}
+
+.off-shelf-confirm-thumb img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #3a3a44;
+}
+
+.off-shelf-confirm-fields {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+  font-size: 13px;
+  color: var(--mall-text);
+}
+
+.off-shelf-confirm-fields p,
+.off-shelf-confirm-line {
+  margin: 0;
+}
+
+.off-shelf-confirm-label {
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--mall-text-muted);
+  font-size: 12px;
+}
+
+.off-shelf-confirm-minimal {
+  margin-top: 12px;
 }
 
 .dialog-card {

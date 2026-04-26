@@ -7,6 +7,7 @@ import GoodsDetailView from '@/views/GoodsDetailView.vue'
 import UserOrderPayView from '@/views/UserOrderPayView.vue'
 import MerchantApplyGoodsView from '@/views/MerchantApplyGoodsView.vue'
 import MerchantApplyPayView from '@/views/MerchantApplyPayView.vue'
+import MerchantOffShelfPayView from '@/views/MerchantOffShelfPayView.vue'
 import SearchResultsView from '@/views/SearchResultsView.vue'
 import CartView from '@/views/CartView.vue'
 
@@ -71,6 +72,12 @@ export const router = createRouter({
       path: '/merchant/apply-pay',
       name: 'merchant-apply-pay',
       component: MerchantApplyPayView,
+      meta: { layout: 'profile' },
+    },
+    {
+      path: '/merchant/off-shelf-pay',
+      name: 'merchant-off-shelf-pay',
+      component: MerchantOffShelfPayView,
       meta: { layout: 'profile' },
     },
   ],

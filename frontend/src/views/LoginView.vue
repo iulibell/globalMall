@@ -21,6 +21,44 @@ const password = ref('')
 const requiredRoleKey = ref('user')
 const submitting = ref(false)
 const errorMsg = ref('')
+const apiMsgMap = {
+  validation_usertype_invalid: {
+    '1': '账号身份与登录入口不匹配，请重新选择身份',
+    '2': 'Account role does not match selected login role.',
+    '3': 'Роль аккаунта не соответствует выбранному входу.',
+  },
+  validation_role_required: {
+    '1': '请选择登录身份',
+    '2': 'Please select a role.',
+    '3': 'Пожалуйста, выберите роль.',
+  },
+  validation_username_required: {
+    '1': '用户名不能为空',
+    '2': 'Username is required.',
+    '3': 'Требуется имя пользователя.',
+  },
+  validation_password_required: {
+    '1': '密码不能为空',
+    '2': 'Password is required.',
+    '3': 'Требуется пароль.',
+  },
+}
+
+function trApiMsg(msg, fallback) {
+  const key = String(msg || '').trim()
+  if (!key) return fallback
+  const mappedKey = {
+    validation_usertype_invalid: 'api_validation_usertype_invalid',
+    validation_role_required: 'api_validation_role_required',
+    validation_username_required: 'api_validation_username_required',
+    validation_password_required: 'api_validation_password_required',
+  }[key]
+  if (mappedKey) {
+    return tx(mappedKey)
+  }
+  const lang = String(uiLang.value || '1')
+  return apiMsgMap[key]?.[lang] || apiMsgMap[key]?.['1'] || fallback || key
+}
 
 const roles = computed(() => [
   { value: 'super', label: tx('role_super') },
@@ -63,7 +101,7 @@ async function onSubmit() {
       await router.push({ name: 'home' })
       return
     }
-    errorMsg.value = data?.message || tx('login_fail_generic')
+    errorMsg.value = trApiMsg(data?.message, tx('login_fail_generic'))
   } catch (e) {
     errorMsg.value = tx('login_fail_network')
   } finally {

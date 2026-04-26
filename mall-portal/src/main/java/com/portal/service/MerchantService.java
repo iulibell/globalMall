@@ -2,7 +2,9 @@ package com.portal.service;
 
 import com.common.api.CommonResult;
 import com.portal.dto.*;
+import com.portal.entity.PortalOffShelf;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public interface MerchantService {
@@ -26,7 +28,7 @@ public interface MerchantService {
      * 申请商品下架，需支付运费与下架处理费用(merchant操作)
      * @param goodsId 商品id
      */
-    void applyForOffShelf(String goodsId);
+    void applyForOffShelf(String goodsId, String city);
 
     /**
      * 支付下架费用，支付成功后创建wms出库单
@@ -34,6 +36,21 @@ public interface MerchantService {
      * @param portalOffShelfPayDto 下架支付参数
      */
     void payForOffShelf(PortalOffShelfPayDto portalOffShelfPayDto);
+
+    /**
+     * 商城审核员设置下架费用（可选）；主流程为物流仓管在 WMS 核定。
+     */
+    boolean setOffShelfFeeByReviewer(Long offShelfId, BigDecimal fee);
+
+    /**
+     * 物流 WMS 经 Feign 调用：将「待审核」置为「待支付」并写入核定费用、开启支付窗口。
+     */
+    boolean setOffShelfFeeFromSys(Long offShelfId, BigDecimal fee);
+
+    /**
+     * 获取当前商家的下架申请列表
+     */
+    List<PortalOffShelf> getOffShelfList(int pageNum, int pageSize);
 
     /**
      * 下架申请支付超时：仅当申请仍为「未支付(0)」时置为「超时未支付(2)」。

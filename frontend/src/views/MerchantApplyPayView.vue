@@ -74,6 +74,7 @@ async function submitPay() {
       apply.value = { ...apply.value, isPay: 1 }
       sessionStorage.setItem('merchant_apply_pay_row', JSON.stringify(apply.value))
     }
+    await router.push({ name: 'profile' })
   } catch {
     error.value = '网络异常，请确认 mall-portal 已启动'
   } finally {

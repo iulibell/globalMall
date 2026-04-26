@@ -47,7 +47,7 @@ public class PortalGoods {
     private String description;
     @Schema(description = "访问次数(初始值为0)")
     private Long visitVolume;
-    @Schema(description = "商品状态:0->待入库,1->已入库(可展示到页面中)")
+    @Schema(description = "商品状态:0->未上架,1->已上架(可展示),2->已下架")
     private Short status;
     private Date createTime;
     private Date updateTime;

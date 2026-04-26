@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import ProductCard from '@/components/ProductCard.vue'
 import { searchGoods } from '@/api/search'
+import { fetchGoodsDetailBatch } from '@/api/portal'
 import { useUiLang } from '@/composables/useUiLang.js'
 import { useMultiDictionary } from '@/composables/useMultiDictionary.js'
 import { pageDictFallback } from '@/utils/pageDictionaryFallback.js'
@@ -37,6 +38,8 @@ function toCard(item, i) {
     goodsId: item.goodsId != null ? String(item.goodsId) : '',
     title: item.skuName || item.description || `${goodsPrefix}${item.goodsId || i + 1}`,
     price: Number(item.price || 0).toFixed(2),
+    originPrice: '',
+    seckill: false,
     merchantId,
     skuCode:
       item?.skuCode != null
@@ -50,6 +53,38 @@ function toCard(item, i) {
     badge: item.type || '',
     imageUrl,
     imageTone: ['a', 'b', 'c'][Math.abs((item.category ?? i) % 3)],
+  }
+}
+
+async function patchCardsWithPortalPrice(cards) {
+  const ids = cards
+    .map((card) => String(card.goodsId || '').trim())
+    .filter((id) => id !== '')
+  if (ids.length === 0) return cards
+  try {
+    const { ok, data } = await fetchGoodsDetailBatch(ids)
+    if (!ok || data?.code !== 200 || !Array.isArray(data?.data)) return cards
+    const detailMap = new Map(
+      data.data
+        .filter((row) => row && row.goodsId != null)
+        .map((row) => [String(row.goodsId), row]),
+    )
+    return cards.map((card) => {
+      const detail = detailMap.get(String(card.goodsId || ''))
+      if (!detail) return card
+      const currentPrice = Number(detail.price)
+      const originPrice = Number(detail.originPrice)
+      const isSeckill = Boolean(detail.seckill) && Number.isFinite(currentPrice)
+      return {
+        ...card,
+        price: Number.isFinite(currentPrice) ? currentPrice.toFixed(2) : card.price,
+        originPrice: isSeckill && Number.isFinite(originPrice) ? originPrice.toFixed(2) : '',
+        seckill: isSeckill,
+        badge: isSeckill ? '秒杀' : card.badge,
+      }
+    })
+  } catch {
+    return cards
   }
 }
 
@@ -70,7 +105,8 @@ async function fetchSearchResults(query) {
       return
     }
     const items = Array.isArray(data?.data?.items) ? data.data.items : []
-    searchResults.value = items.map(toCard)
+    const cards = items.map(toCard)
+    searchResults.value = await patchCardsWithPortalPrice(cards)
   } catch {
     searchError.value = tx('search_request_fail')
     searchResults.value = []

@@ -25,6 +25,8 @@ import jakarta.annotation.Resource;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -120,9 +122,12 @@ public class MerchantServiceImpl implements MerchantService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void applyForOffShelf(String goodsId) {
+    public void applyForOffShelf(String goodsId, String city) {
         StpUtil.checkLogin();
         StpUtil.checkPermission("merchant");
+        if (StrUtil.isBlank(city)) {
+            Assert.fail("城市不能为空");
+        }
         String merchantId = StpUtil.getLoginIdAsString();
 
         PortalGoods portalGoods = portalGoodsDao.selectOne(new LambdaQueryWrapper<PortalGoods>()
@@ -138,15 +143,11 @@ public class MerchantServiceImpl implements MerchantService {
         portalOffShelf.setGoodsId(goodsId);
         portalOffShelf.setMerchantId(merchantId);
         portalOffShelf.setFee(BigDecimal.ZERO);
-        portalOffShelf.setCity(null);
+        portalOffShelf.setCity(city.trim());
         portalOffShelf.setStatus((short) 0);
         portalOffShelf.setCreateTime(now);
         portalOffShelf.setUpdateTime(now);
         portalOffShelfDao.insert(portalOffShelf);
-        redisService.set(RedisConstant.OFF_SHELF_PAY_PREFIX + portalOffShelf.getId(),
-                "",
-                RedisConstant.OFF_SHELF_PAY_EXPIRE,
-                TimeUnit.HOURS);
 
         if(redisService.get(RedisConstant.HOT_GOODS_PREFIX + goodsId) != null)
             redisService.delete(RedisConstant.HOT_GOODS_PREFIX + goodsId);
@@ -162,9 +163,19 @@ public class MerchantServiceImpl implements MerchantService {
         PortalOffShelf portalOffShelf = portalOffShelfDao.selectOne(new LambdaQueryWrapper<PortalOffShelf>()
                 .eq(PortalOffShelf::getId, portalOffShelfPayDto.getOffShelfId())
                 .eq(PortalOffShelf::getMerchantId, merchantId)
-                .eq(PortalOffShelf::getStatus, (short) 0));
+                .eq(PortalOffShelf::getStatus, (short) 1));
         if (portalOffShelf == null) {
-            Assert.fail("下架申请不存在或已支付/已超时");
+            Assert.fail("下架申请不存在、未核定为待支付或已处理");
+        }
+        if (portalOffShelf.getFee() == null || portalOffShelf.getFee().compareTo(BigDecimal.ZERO) <= 0) {
+            Assert.fail("费用未核定，请联系物流仓管");
+        }
+        if (portalOffShelfPayDto.getFee() == null
+                || portalOffShelf.getFee().compareTo(portalOffShelfPayDto.getFee()) != 0) {
+            Assert.fail("支付金额与核定费用不一致，请刷新页面");
+        }
+        if (redisService.get(RedisConstant.OFF_SHELF_PAY_PREFIX + portalOffShelfPayDto.getOffShelfId()) == null) {
+            Assert.fail("支付已超时或窗口已关闭，请刷新后重试");
         }
 
         PortalGoods portalGoods = portalGoodsDao.selectOne(new LambdaQueryWrapper<PortalGoods>()
@@ -178,10 +189,9 @@ public class MerchantServiceImpl implements MerchantService {
         Date now = new Date();
         int rows = portalOffShelfDao.update(null, new LambdaUpdateWrapper<PortalOffShelf>()
                 .eq(PortalOffShelf::getId, portalOffShelfPayDto.getOffShelfId())
-                .eq(PortalOffShelf::getStatus, (short) 0)
-                .set(PortalOffShelf::getFee, portalOffShelfPayDto.getFee())
+                .eq(PortalOffShelf::getStatus, (short) 1)
                 .set(PortalOffShelf::getCity, portalOffShelfPayDto.getCity())
-                .set(PortalOffShelf::getStatus, (short) 1)
+                .set(PortalOffShelf::getStatus, (short) 2)
                 .set(PortalOffShelf::getUpdateTime, now));
         if (rows == 0) {
             Assert.fail("下架申请支付状态更新失败");
@@ -199,13 +209,67 @@ public class MerchantServiceImpl implements MerchantService {
         wmsOutboundCreateDto.setMerchantPhone(portalOffShelfPayDto.getMerchantPhone());
         wmsOutboundCreateDto.setCity(portalOffShelfPayDto.getCity());
         wmsOutboundCreateDto.setStatus((short) 0);
-        wmsServiceClient.createOutbound(wmsOutboundCreateDto);
+        wmsOutboundCreateDto.setPaidFee(portalOffShelf.getFee());
+        // 避免在当前事务未提交时被 WMS 回调再次更新同一条 off-shelf 行，造成锁等待超时
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    wmsServiceClient.createOutbound(wmsOutboundCreateDto);
+                }
+            });
+        } else {
+            wmsServiceClient.createOutbound(wmsOutboundCreateDto);
+        }
 
         portalGoodsDao.update(new LambdaUpdateWrapper<PortalGoods>()
                 .eq(PortalGoods::getGoodsId, portalOffShelf.getGoodsId())
                 .eq(PortalGoods::getMerchantId, merchantId)
-                .set(PortalGoods::getStatus, (short) 0));
+                .set(PortalGoods::getStatus, (short) 2));
         redisService.delete(RedisConstant.OFF_SHELF_PAY_PREFIX + portalOffShelfPayDto.getOffShelfId());
+    }
+
+    @Override
+    public boolean setOffShelfFeeByReviewer(Long offShelfId, BigDecimal fee) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("reviewer");
+        return setOffShelfFeeFromSys(offShelfId, fee);
+    }
+
+    @Override
+    public boolean setOffShelfFeeFromSys(Long offShelfId, BigDecimal fee) {
+        if (offShelfId == null) {
+            Assert.fail("offShelfId不能为空");
+        }
+        if (fee == null || fee.compareTo(BigDecimal.ZERO) <= 0) {
+            Assert.fail("核定费用必须大于0");
+        }
+        Date now = new Date();
+        int rows = portalOffShelfDao.update(null, new LambdaUpdateWrapper<PortalOffShelf>()
+                .eq(PortalOffShelf::getId, offShelfId)
+                .eq(PortalOffShelf::getStatus, (short) 0)
+                .set(PortalOffShelf::getFee, fee)
+                .set(PortalOffShelf::getStatus, (short) 1)
+                .set(PortalOffShelf::getUpdateTime, now));
+        if (rows > 0) {
+            redisService.set(RedisConstant.OFF_SHELF_PAY_PREFIX + offShelfId,
+                    "",
+                    RedisConstant.OFF_SHELF_PAY_EXPIRE,
+                    TimeUnit.HOURS);
+        }
+        return rows > 0;
+    }
+
+    @Override
+    public List<PortalOffShelf> getOffShelfList(int pageNum, int pageSize) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("merchant");
+        String merchantId = StpUtil.getLoginIdAsString();
+        IPage<PortalOffShelf> page = new Page<>(pageNum, pageSize);
+        portalOffShelfDao.selectPage(page, new LambdaQueryWrapper<PortalOffShelf>()
+                .eq(PortalOffShelf::getMerchantId, merchantId)
+                .orderByDesc(PortalOffShelf::getCreateTime));
+        return page.getRecords();
     }
 
     @Override
@@ -213,8 +277,8 @@ public class MerchantServiceImpl implements MerchantService {
         Date now = new Date();
         int rows = portalOffShelfDao.update(null, new LambdaUpdateWrapper<PortalOffShelf>()
                 .eq(PortalOffShelf::getId, offShelfId)
-                .eq(PortalOffShelf::getStatus, (short) 0)
-                .set(PortalOffShelf::getStatus, (short) 2)
+                .eq(PortalOffShelf::getStatus, (short) 1)
+                .set(PortalOffShelf::getStatus, (short) 3)
                 .set(PortalOffShelf::getUpdateTime, now));
         if (rows > 0) {
             redisService.delete(RedisConstant.OFF_SHELF_PAY_PREFIX + offShelfId);

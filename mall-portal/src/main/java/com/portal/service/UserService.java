@@ -1,6 +1,7 @@
 package com.portal.service;
 
 import com.common.api.CommonResult;
+import com.portal.dto.CreateDirectOrderRequest;
 import com.portal.dto.CreateOrderFromCartRequest;
 import com.portal.dto.OmsOrderDto;
 import com.portal.dto.SysUserInfoDto;
@@ -15,6 +16,11 @@ public interface UserService {
      * 从购物车创建待支付订单(user操作)
      */
     CommonResult<?> createOrderFromCart(CreateOrderFromCartRequest request);
+
+    /**
+     * 商品详情页直接购买并创建待支付订单(user操作)
+     */
+    CommonResult<?> createOrderDirect(CreateDirectOrderRequest request);
 
     /**
      * 支付订单(user操作)

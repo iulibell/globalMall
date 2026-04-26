@@ -39,6 +39,21 @@ export async function fetchGoodsDetail(goodsId) {
   return { ok: res.ok, status: res.status, data }
 }
 
+export async function fetchGoodsDetailBatch(goodsIds = []) {
+  const res = await fetch(buildUrl('/portal/getGoodsDetailBatch'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Array.isArray(goodsIds) ? goodsIds : []),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
 /** 商品类型列表（需 manager 或 merchant 登录态，用于商家申请上架等） */
 export async function fetchGoodsTypes(params = {}) {
   const res = await fetch(buildUrl('/portal/getGoodsType', params), {
@@ -155,13 +170,50 @@ export async function merchantApplyGoods(payload) {
 }
 
 /** 商家下架申请（需 merchant 登录态） */
-export async function merchantApplyForOffShelf(goodsId) {
-  const res = await fetch(buildUrl('/portal/merchant/applyForOffShelf', { goodsId }), {
+export async function merchantApplyForOffShelf(goodsId, city) {
+  const res = await fetch(buildUrl('/portal/merchant/applyForOffShelf', { goodsId, city }), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       ...buildAuthHeader(),
     },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 商家下架申请列表（需 merchant 登录态） */
+export async function fetchMerchantOffShelfList({ pageNum = 1, pageSize = 10 } = {}) {
+  const res = await fetch(buildUrl('/portal/merchant/getOffShelfList', { pageNum, pageSize }), {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 商家支付下架费用（需 merchant 登录态） */
+export async function merchantPayForOffShelf(payload) {
+  const res = await fetch(buildUrl('/portal/merchant/payForOffShelf'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(payload),
   })
   let data = {}
   try {
@@ -211,6 +263,43 @@ export async function merchantCancelGoodsApply(applyId) {
 /** 商家查询我的商品列表（需 merchant 登录态） */
 export async function fetchMerchantPortalGoods(params = {}) {
   const res = await fetch(buildUrl('/portal/merchant/getPortalGoods', params), {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 商家报名秒杀活动（需 merchant 登录态） */
+export async function merchantApplySeckillActivity(payload) {
+  const res = await fetch(buildUrl('/portal/merchant/seckill/apply'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(payload || {}),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 商家查询我的秒杀活动 */
+export async function fetchMerchantSeckillActivities({ pageNum = 1, pageSize = 10 } = {}) {
+  const res = await fetch(buildUrl('/portal/merchant/seckill/myList', { pageNum, pageSize }), {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -362,6 +451,99 @@ export async function createOrderFromCart(payload) {
       ...buildAuthHeader(),
     },
     body: JSON.stringify(payload),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 商品详情页直接创建订单（需 user 登录态） */
+export async function createOrderDirect(payload) {
+  const res = await fetch(buildUrl('/portal/user/order/createDirect'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(payload),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 超管/经理：秒杀活动列表 */
+export async function fetchSeckillActivitiesForManager({ pageNum = 1, pageSize = 10, status } = {}) {
+  const res = await fetch(buildUrl('/portal/manager/seckill/list', { pageNum, pageSize, status }), {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** super：发起秒杀活动主信息 */
+export async function launchSeckillActivity(payload) {
+  const res = await fetch(buildUrl('/portal/manager/seckill/launch'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(payload || {}),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 审核员：审核秒杀活动 */
+export async function reviewSeckillActivity(payload) {
+  const res = await fetch(buildUrl('/portal/manager/seckill/review'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(payload || {}),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 审核员：取消秒杀活动 */
+export async function cancelSeckillActivity(activityCode, reviewRemark = '') {
+  const res = await fetch(buildUrl('/portal/manager/seckill/cancel', { activityCode, reviewRemark }), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
   })
   let data = {}
   try {

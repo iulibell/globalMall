@@ -46,7 +46,8 @@ CREATE TABLE `portal_goods_off_shelf` (
   `merchant_id` varchar(255) DEFAULT NULL COMMENT '商家id',
   `city` varchar(20) DEFAULT NULL COMMENT '商家所属城市',
   `fee` decimal(10,2) DEFAULT NULL COMMENT '所支付的下架处理费用与运费',
-  `status` smallint DEFAULT NULL COMMENT '状态:0->未支付(默认),1->已支付,2->超时未支付,3->下架完成',
+  `transport_order_id` varchar(255) DEFAULT NULL COMMENT '关联物流运输单号',
+  `status` smallint DEFAULT NULL COMMENT '状态:0->待审核,1->待支付,2->已支付,3->超时未支付,4->下架完成',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)
@@ -127,7 +128,7 @@ CREATE TABLE `portal_goods` (
   `type` varchar(20) DEFAULT NULL COMMENT '商品类型',
   `description` varchar(500) DEFAULT NULL COMMENT '商品描述',
   `visit_volume` bigint DEFAULT NULL COMMENT '访问次数(初始值为0)',
-  `status` smallint DEFAULT NULL COMMENT '商品状态:0->待入库,1->已入库(可展示到页面中)',
+  `status` smallint DEFAULT NULL COMMENT '商品状态:0->未上架,1->已上架(可展示),2->已下架',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`)

@@ -4,6 +4,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.math.BigDecimal;
+
 @Data
 public class WmsOutboundCreateDto {
     @NotBlank(message = "outboundId不能为空")
@@ -28,4 +30,9 @@ public class WmsOutboundCreateDto {
     private String city;
     @NotNull(message = "status不能为空")
     private Short status;
+
+    /**
+     * 商城下架已支付总费用（含下架处理费与运费）；仅 orderId 以 OFF 开头时由 WMS 用于创建 TMS 运输单。
+     */
+    private BigDecimal paidFee;
 }

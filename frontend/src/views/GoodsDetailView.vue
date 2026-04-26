@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { addUserCart, fetchGoodsDetail } from '@/api/portal'
+import { addUserCart, createOrderDirect, fetchGoodsDetail } from '@/api/portal'
 
 const route = useRoute()
 const router = useRouter()
@@ -10,6 +10,8 @@ const loading = ref(true)
 const error = ref('')
 const goods = ref(null)
 const addingCart = ref(false)
+const buyingNow = ref(false)
+const buyQuantity = ref(1)
 const cartTip = ref('')
 const cartError = ref('')
 
@@ -21,6 +23,15 @@ const priceText = computed(() => {
   const n = Number(p)
   return Number.isFinite(n) ? n.toFixed(2) : String(p)
 })
+
+const originPriceText = computed(() => {
+  const p = goods.value?.originPrice
+  if (p == null || p === '') return ''
+  const n = Number(p)
+  return Number.isFinite(n) ? n.toFixed(2) : String(p)
+})
+
+const isSeckill = computed(() => Boolean(goods.value?.seckill))
 
 const imageSrc = computed(() => {
   const pic = String(goods.value?.picture || '').trim()
@@ -42,6 +53,7 @@ async function load() {
   goods.value = null
   cartTip.value = ''
   cartError.value = ''
+  buyQuantity.value = 1
   try {
     const { ok, data } = await fetchGoodsDetail(id)
     if (!ok || data?.code !== 200) {
@@ -101,6 +113,58 @@ async function addToCart() {
   }
 }
 
+async function buyNow() {
+  if (!goods.value) return
+  const userId = (localStorage.getItem('userId') || '').trim()
+  const role = (localStorage.getItem('role') || '').trim()
+  if (!userId) {
+    cartError.value = '请先登录后再购买'
+    return
+  }
+  if (role && role !== 'user') {
+    cartError.value = '当前账号不是普通用户，暂不支持购买'
+    return
+  }
+  const userPhone = String(localStorage.getItem('phone') || '').trim()
+  const city = String(localStorage.getItem('city') || '').trim()
+  if (!userPhone || !city) {
+    cartError.value = '请先在个人中心完善手机号和城市'
+    return
+  }
+  const qty = Number(buyQuantity.value)
+  if (!Number.isFinite(qty) || qty <= 0) {
+    cartError.value = '购买数量必须大于0'
+    return
+  }
+  buyingNow.value = true
+  cartTip.value = ''
+  cartError.value = ''
+  try {
+    const { ok, data } = await createOrderDirect({
+      goodsId: String(goods.value.goodsId || '').trim(),
+      quantity: Math.floor(qty),
+      userPhone,
+      city,
+    })
+    if (!ok || data?.code !== 200) {
+      cartError.value = data?.message || '创建订单失败'
+      return
+    }
+    const payload = data?.data || {}
+    router.push({
+      name: 'order-pay',
+      query: {
+        orderId: payload.orderId || '',
+        expireAt: payload.expireAt || '',
+      },
+    })
+  } catch {
+    cartError.value = '网络异常，请确认 mall-portal 已启动'
+  } finally {
+    buyingNow.value = false
+  }
+}
+
 watch(
   () => route.params.goodsId,
   () => {
@@ -128,24 +192,14 @@ watch(
           <div v-else class="photo-placeholder" role="img" :aria-label="goods.skuName" />
         </div>
         <div class="info">
-          <p class="goods-id">商品编号：{{ goods.goodsId }}</p>
           <h1 class="title">{{ goods.skuName }}</h1>
           <p class="price-line">
             <span class="currency">¥</span><span class="amount">{{ priceText }}</span>
           </p>
+          <p v-if="isSeckill && originPriceText" class="origin-price-line">
+            原价 ¥{{ originPriceText }}
+          </p>
           <dl class="meta">
-            <div v-if="goods.type" class="row">
-              <dt>类型</dt>
-              <dd>{{ goods.type }}</dd>
-            </div>
-            <div v-if="goods.category != null" class="row">
-              <dt>分类</dt>
-              <dd>{{ goods.category }}</dd>
-            </div>
-            <div v-if="goods.merchantId" class="row">
-              <dt>商家</dt>
-              <dd>{{ goods.merchantId }}</dd>
-            </div>
             <div v-if="goods.picture && !imageSrc" class="row">
               <dt>图片</dt>
               <dd class="muted">{{ goods.picture }}</dd>
@@ -158,8 +212,17 @@ watch(
           <p v-if="cartTip" class="cart-tip">{{ cartTip }}</p>
           <p v-if="cartError" class="cart-tip error">{{ cartError }}</p>
           <div class="actions">
+            <div class="buy-now-row">
+              <label class="qty-label">
+                购买数量
+                <input v-model.number="buyQuantity" class="qty-input" type="number" min="1" step="1" />
+              </label>
+            </div>
             <button type="button" class="btn primary" :disabled="addingCart" @click="addToCart">
               {{ addingCart ? '加入中...' : '加入购物车' }}
+            </button>
+            <button type="button" class="btn primary buy-now" :disabled="buyingNow" @click="buyNow">
+              {{ buyingNow ? '创建中...' : '立即购买' }}
             </button>
             <button type="button" class="btn ghost" @click="router.push({ name: 'home' })">返回首页</button>
           </div>
@@ -278,6 +341,13 @@ watch(
   color: var(--mall-orange-bright, #ff9f1a);
 }
 
+.origin-price-line {
+  margin: -4px 0 0;
+  font-size: 0.9rem;
+  color: var(--mall-text-muted);
+  text-decoration: line-through;
+}
+
 .price-line .currency {
   font-size: 1rem;
   margin-right: 2px;
@@ -345,6 +415,33 @@ watch(
   gap: 12px;
   margin-top: auto;
   padding-top: 16px;
+}
+
+.buy-now-row {
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.qty-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.88rem;
+  color: var(--mall-text-muted);
+}
+
+.qty-input {
+  width: 96px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--mall-border);
+  background: var(--mall-surface);
+  color: var(--mall-text);
+  padding: 0 10px;
+}
+
+.buy-now {
+  background: linear-gradient(180deg, #34d399, #10b981);
 }
 
 .btn {

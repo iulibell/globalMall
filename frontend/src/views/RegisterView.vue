@@ -3,6 +3,9 @@ import { ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { register, sendRegisterCaptcha } from '@/api/systemAuth'
 import MallLanguageDropdown from '@/components/MallLanguageDropdown.vue'
+import { useUiLang } from '@/composables/useUiLang.js'
+import { useMultiDictionary } from '@/composables/useMultiDictionary.js'
+import { pageDictFallback } from '@/utils/pageDictionaryFallback.js'
 
 const username = ref('')
 const password = ref('')
@@ -16,6 +19,75 @@ const countdown = ref(0)
 const errorMsg = ref('')
 const infoMsg = ref('')
 const registerSuccess = ref(false)
+const { uiLang } = useUiLang()
+const { t } = useMultiDictionary(['page_mall'], uiLang)
+
+function tx(key) {
+  return t('page_mall', key, pageDictFallback('page_mall', key, uiLang.value))
+}
+
+const apiMsgMap = {
+  validation_usertype_invalid: {
+    '1': '申请身份不合法，请重新选择',
+    '2': 'Invalid role selected. Please choose again.',
+    '3': 'Недопустимая роль. Пожалуйста, выберите снова.',
+  },
+  validation_register_username_required: {
+    '1': '用户名不能为空',
+    '2': 'Username is required.',
+    '3': 'Требуется имя пользователя.',
+  },
+  validation_register_password_required: {
+    '1': '密码不能为空',
+    '2': 'Password is required.',
+    '3': 'Требуется пароль.',
+  },
+  validation_phone_required: {
+    '1': '手机号不能为空',
+    '2': 'Phone number is required.',
+    '3': 'Требуется номер телефона.',
+  },
+  validation_phone_format: {
+    '1': '手机号格式不正确',
+    '2': 'Invalid phone number format.',
+    '3': 'Неверный формат номера телефона.',
+  },
+  register_captcha_required: {
+    '1': '验证码不能为空',
+    '2': 'Verification code is required.',
+    '3': 'Требуется код подтверждения.',
+  },
+  register_captcha_invalid: {
+    '1': '验证码错误或已失效',
+    '2': 'Verification code is invalid or expired.',
+    '3': 'Код подтверждения неверен или истек.',
+  },
+  register_captcha_rate_limit: {
+    '1': '验证码发送过于频繁，请稍后再试',
+    '2': 'Too many requests. Try again later.',
+    '3': 'Слишком частые запросы. Попробуйте позже.',
+  },
+}
+
+function trApiMsg(msg, fallback) {
+  const key = String(msg || '').trim()
+  if (!key) return fallback
+  const mappedKey = {
+    validation_usertype_invalid: 'api_validation_usertype_invalid',
+    validation_register_username_required: 'api_validation_register_username_required',
+    validation_register_password_required: 'api_validation_register_password_required',
+    validation_phone_required: 'api_validation_phone_required',
+    validation_phone_format: 'api_validation_phone_format',
+    register_captcha_required: 'api_register_captcha_required',
+    register_captcha_invalid: 'api_register_captcha_invalid',
+    register_captcha_rate_limit: 'api_register_captcha_rate_limit',
+  }[key]
+  if (mappedKey) {
+    return tx(mappedKey)
+  }
+  const lang = String(uiLang.value || '1')
+  return apiMsgMap[key]?.[lang] || apiMsgMap[key]?.['1'] || fallback || key
+}
 
 const userTypes = [
   { value: '1', label: '超级管理员' },
@@ -39,7 +111,7 @@ async function onSendCaptcha() {
   errorMsg.value = ''
   infoMsg.value = ''
   if (!/^1\d{10}$/.test(phone.value.trim())) {
-    errorMsg.value = '请输入 11 位中国大陆手机号'
+    errorMsg.value = tx('api_validation_phone_format')
     return
   }
   captchaLoading.value = true
@@ -49,16 +121,16 @@ async function onSendCaptcha() {
       infoMsg.value =
         data?.data?.debugCode != null
           ? `验证码已生成（调试）：${data.data.debugCode}`
-          : '验证码已发送（若未接短信，请查看后端日志或打开 debug-return）'
+          : tx('register_captcha_sent_hint')
       startCooldown(60)
       return
     }
-    errorMsg.value = data?.message || '发送失败'
+    errorMsg.value = trApiMsg(data?.message, tx('register_send_fail'))
     if (data?.message === 'register_captcha_rate_limit') {
       startCooldown(60)
     }
   } catch {
-    errorMsg.value = '网络异常，请确认 gl-system 已启动'
+    errorMsg.value = tx('login_fail_network')
   } finally {
     captchaLoading.value = false
   }
@@ -80,13 +152,13 @@ async function onSubmit() {
     })
     if (data?.code === 200) {
       const msg = typeof data.data === 'string' ? data.data : data.message
-      infoMsg.value = msg || '提交成功'
+      infoMsg.value = msg || tx('register_submit_ok')
       registerSuccess.value = true
       return
     }
-    errorMsg.value = data?.message || '注册失败'
+    errorMsg.value = trApiMsg(data?.message, tx('register_submit_fail'))
   } catch {
-    errorMsg.value = '网络异常，请确认 gl-system 已启动'
+    errorMsg.value = tx('login_fail_network')
   } finally {
     submitting.value = false
   }

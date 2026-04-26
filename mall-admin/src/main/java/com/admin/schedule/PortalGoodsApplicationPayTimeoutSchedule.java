@@ -20,8 +20,7 @@ public class PortalGoodsApplicationPayTimeoutSchedule {
     @Async
     public void cleanGoodsApplication() {
         goodsApplicationDao.delete(new LambdaQueryWrapper<PortalGoodsApplication>()
-                .eq(PortalGoodsApplication::getMallStatus,(short)1)
-                .eq(PortalGoodsApplication::getLogisticStatus,(short)1)
-                .eq(PortalGoodsApplication::getIsPay,(short)2));
+                .in(PortalGoodsApplication::getMallStatus,(short)1,(short)2,(short)3)
+                .in(PortalGoodsApplication::getLogisticStatus,(short)1,(short)2));
     }
 }

@@ -30,8 +30,12 @@ function onSearch(q) {
 <template>
   <div class="app-shell">
     <MallHeader v-if="showMallHeader" @search="onSearch" />
-    <p v-if="showSearchToast" class="search-toast container" role="status">
-      {{ tx('mall_search_toast_prefix') }}<strong>{{ lastQuery }}</strong>{{ tx('mall_search_toast_suffix') }}
+    <p v-if="showSearchToast" class="search-toast" role="status">
+      <span class="container search-toast-inner">
+        <span class="search-toast-text">
+          {{ tx('mall_search_toast_prefix') }}<strong>{{ lastQuery }}</strong>{{ tx('mall_search_toast_suffix') }}
+        </span>
+      </span>
     </p>
     <router-view />
   </div>
@@ -52,11 +56,21 @@ function onSearch(q) {
 
 .search-toast {
   margin: 0;
-  padding: 10px 16px;
   font-size: 0.85rem;
   color: var(--mall-text-muted);
   background: rgba(255, 138, 0, 0.08);
   border-bottom: 1px solid var(--mall-border);
+}
+
+.search-toast-inner {
+  display: block;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+.search-toast-text {
+  display: block;
+  padding-left: 12px;
 }
 
 .search-toast strong {

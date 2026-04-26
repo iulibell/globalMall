@@ -8,11 +8,16 @@ import com.common.api.ResultCode;
 import com.common.constant.PortalConstant;
 import com.portal.dao.OmsCartDao;
 import com.portal.dao.PortalGoodsDao;
+import com.portal.dao.SeckillActivityDao;
+import com.portal.dao.SeckillActivityGoodsDao;
+import com.portal.dto.CreateDirectOrderRequest;
 import com.portal.dto.CreateOrderFromCartRequest;
 import com.portal.dto.OmsOrderDto;
 import com.portal.dto.SysUserInfoDto;
 import com.portal.entity.OmsCart;
 import com.portal.entity.PortalGoods;
+import com.portal.entity.SeckillActivity;
+import com.portal.entity.SeckillActivityGoods;
 import com.portal.service.OmsCartService;
 import com.portal.service.UserService;
 import com.portal.service.client.OmsServiceClient;
@@ -22,9 +27,13 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
@@ -40,6 +49,10 @@ public class UserServiceImpl implements UserService {
     private SystemServiceClient systemServiceClient;
     @Resource
     private WmsServiceClient wmsServiceClient;
+    @Resource
+    private SeckillActivityDao seckillActivityDao;
+    @Resource
+    private SeckillActivityGoodsDao seckillActivityGoodsDao;
 
     @Override
     public CommonResult<?> addOrder(OmsOrderDto omsOrderDto) {
@@ -87,7 +100,7 @@ public class UserServiceImpl implements UserService {
         order.setLocationId(goods.getLocationId());
         order.setSkuName(cart.getSkuName());
         order.setSkuCode((cart.getSkuCode() == null || cart.getSkuCode().isBlank()) ? "DEFAULT" : cart.getSkuCode());
-        order.setPrice(cart.getPrice() == null ? BigDecimal.ZERO : cart.getPrice());
+        order.setPrice(resolveOrderUnitPrice(goods.getGoodsId(), goods.getPrice()));
         order.setUserPhone(request.getUserPhone().trim());
         // 当前门户侧无商家手机号来源，先使用兜底值避免阻断下单。
         order.setMerchantPhone(request.getUserPhone().trim());
@@ -104,6 +117,69 @@ public class UserServiceImpl implements UserService {
         order.setWarehouseCity(warehouseCity.trim());
         order.setCategory(goods.getCategory() == null ? (short) 0 : goods.getCategory());
         order.setQuantity(cart.getQuantity() == null || cart.getQuantity() <= 0 ? 1 : cart.getQuantity());
+        order.setType((goods.getType() == null || goods.getType().isBlank()) ? "normal" : goods.getType());
+        CommonResult<?> result = addOrder(order);
+        if (result == null || result.getCode() != ResultCode.SUCCESS.getCode()) {
+            return result;
+        }
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("orderId", order.getOrderId());
+        CommonResult<?> deadlineResult = executeWithRetry(
+                () -> omsServiceClient.getOrderPayDeadline(order.getOrderId()),
+                "查询订单支付截止时间失败，请稍后重试");
+        Object deadlinePayload = deadlineResult == null ? null : deadlineResult.getData();
+        if (deadlinePayload instanceof Map<?, ?> deadlineMap) {
+            payload.put("expireAt", deadlineMap.get("expireAt"));
+            payload.put("remainingSeconds", deadlineMap.get("remainingSeconds"));
+        }
+        payload.put("message", result.getMessage());
+        return CommonResult.success(payload);
+    }
+
+    @Override
+    public CommonResult<?> createOrderDirect(CreateDirectOrderRequest request) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("user");
+        String loginUserId = StpUtil.getLoginIdAsString();
+        PortalGoods goods = portalGoodsDao.selectOne(new LambdaQueryWrapper<PortalGoods>()
+                .eq(PortalGoods::getGoodsId, request.getGoodsId().trim())
+                .eq(PortalGoods::getStatus, (short) 1));
+        if (goods == null) {
+            Assert.fail("商品不存在或不可下单");
+        }
+        if (goods.getWarehouseId() == null || goods.getLocationId() == null) {
+            Assert.fail("商品仓储信息不完整，暂无法下单");
+        }
+        int buyQty = request.getQuantity() == null ? 1 : request.getQuantity();
+        if (buyQty <= 0) {
+            Assert.fail("购买数量必须大于0");
+        }
+        OmsOrderDto order = new OmsOrderDto();
+        order.setOrderId(UUID.randomUUID().toString().replace("-", ""));
+        order.setMerchantId(goods.getMerchantId());
+        order.setUserId(loginUserId);
+        order.setGoodsId(goods.getGoodsId());
+        order.setWarehouseId(goods.getWarehouseId());
+        order.setLocationId(goods.getLocationId());
+        order.setSkuName(goods.getSkuName());
+        order.setSkuCode((goods.getSkuCode() == null || goods.getSkuCode().isBlank()) ? "DEFAULT" : goods.getSkuCode());
+        order.setPrice(resolveOrderUnitPrice(goods.getGoodsId(), goods.getPrice()));
+        order.setUserPhone(request.getUserPhone().trim());
+        // 当前门户侧无商家手机号来源，先使用兜底值避免阻断下单。
+        order.setMerchantPhone(request.getUserPhone().trim());
+        order.setCity(request.getCity().trim());
+        CommonResult<com.portal.dto.WmsWarehouseDto> warehouseRes = executeWithRetry(
+                () -> wmsServiceClient.getWarehouseById(goods.getWarehouseId()),
+                "查询仓库信息失败，请稍后重试");
+        String warehouseCity = warehouseRes == null || warehouseRes.getData() == null
+                ? null
+                : warehouseRes.getData().getCity();
+        if (warehouseCity == null || warehouseCity.trim().isEmpty()) {
+            Assert.fail("仓库城市信息缺失，暂无法创建订单");
+        }
+        order.setWarehouseCity(warehouseCity.trim());
+        order.setCategory(goods.getCategory() == null ? (short) 0 : goods.getCategory());
+        order.setQuantity(buyQty);
         order.setType((goods.getType() == null || goods.getType().isBlank()) ? "normal" : goods.getType());
         CommonResult<?> result = addOrder(order);
         if (result == null || result.getCode() != ResultCode.SUCCESS.getCode()) {
@@ -141,9 +217,7 @@ public class UserServiceImpl implements UserService {
         CommonResult<?> result = executeWithRetry(
                 () -> omsServiceClient.payForOrder(orderId),
                 "支付处理失败，请稍后重试");
-        if (result != null
-                && result.getCode() == ResultCode.SUCCESS.getCode()
-                && order != null) {
+        if (result != null && result.getCode() == ResultCode.SUCCESS.getCode()) {
             String targetUserId = order.getUserId() == null ? loginUserId : order.getUserId();
             omsCartService.clearBoughtCart(targetUserId, order.getGoodsId(), order.getSkuCode());
         }
@@ -236,5 +310,45 @@ public class UserServiceImpl implements UserService {
     @FunctionalInterface
     private interface RemoteCall<T> {
         CommonResult<T> call();
+    }
+
+    private BigDecimal resolveOrderUnitPrice(String goodsId, BigDecimal fallbackPrice) {
+        if (goodsId == null || goodsId.isBlank()) {
+            return fallbackPrice == null ? BigDecimal.ZERO : fallbackPrice;
+        }
+        Date now = new Date();
+        List<SeckillActivityGoods> approved = seckillActivityGoodsDao.selectList(
+                new LambdaQueryWrapper<SeckillActivityGoods>()
+                        .eq(SeckillActivityGoods::getGoodsId, goodsId)
+                        .eq(SeckillActivityGoods::getStatus, (short) 3)
+                        .orderByDesc(SeckillActivityGoods::getUpdateTime)
+                        .last("limit 5"));
+        if (approved.isEmpty()) {
+            return fallbackPrice == null ? BigDecimal.ZERO : fallbackPrice;
+        }
+        List<String> launchCodes = approved.stream()
+                .map(SeckillActivityGoods::getLaunchActivityCode)
+                .filter(code -> code != null && !code.isBlank())
+                .distinct()
+                .toList();
+        if (launchCodes.isEmpty()) {
+            return fallbackPrice == null ? BigDecimal.ZERO : fallbackPrice;
+        }
+        List<SeckillActivity> activeLaunches = seckillActivityDao.selectList(
+                new LambdaQueryWrapper<SeckillActivity>()
+                        .in(SeckillActivity::getActivityCode, launchCodes)
+                        .eq(SeckillActivity::getStatus, (short) 2)
+                        .le(SeckillActivity::getStartTime, now)
+                        .gt(SeckillActivity::getEndTime, now));
+        if (activeLaunches.isEmpty()) {
+            return fallbackPrice == null ? BigDecimal.ZERO : fallbackPrice;
+        }
+        Set<String> activeCodes = activeLaunches.stream().map(SeckillActivity::getActivityCode).collect(Collectors.toSet());
+        for (SeckillActivityGoods row : approved) {
+            if (activeCodes.contains(row.getLaunchActivityCode()) && row.getSeckillPrice() != null) {
+                return row.getSeckillPrice();
+            }
+        }
+        return fallbackPrice == null ? BigDecimal.ZERO : fallbackPrice;
     }
 }
