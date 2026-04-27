@@ -1,6 +1,7 @@
 package com.admin.service;
 
 import com.common.api.CommonResult;
+import com.admin.dto.SeckillActivityLaunchRequest;
 import com.admin.dto.SysUserDto;
 
 public interface SuperService {
@@ -39,4 +40,9 @@ public interface SuperService {
      * @return 单个用户
      */
     CommonResult<?> fetchSysUserByUserId(String userId);
+
+    /**
+     * 发起秒杀活动主信息（经 mall-portal 落库）
+     */
+    CommonResult<?> launchSeckillActivity(SeckillActivityLaunchRequest request);
 }

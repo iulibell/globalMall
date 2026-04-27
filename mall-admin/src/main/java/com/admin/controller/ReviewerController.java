@@ -6,12 +6,14 @@ import com.admin.service.ReviewerService;
 import com.common.api.CommonResult;
 import com.common.dto.RegisterParamDto;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 
+@Tag(name = "ReviewerController", description = "商城管理审核接口：注册审核与商品上架审核")
 @RestController
 @RequestMapping("/admin")
 public class ReviewerController {

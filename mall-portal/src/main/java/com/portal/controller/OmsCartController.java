@@ -3,6 +3,7 @@ package com.portal.controller;
 import com.common.api.CommonResult;
 import com.portal.dto.OmsCartDto;
 import com.portal.service.OmsCartService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "OmsCartController", description = "门户购物车接口：购物车增删改查、勾选与结算预览")
 @RestController
 @RequestMapping("/portal/user/cart")
 public class OmsCartController {

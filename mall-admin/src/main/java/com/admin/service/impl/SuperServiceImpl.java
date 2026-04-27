@@ -1,7 +1,9 @@
 package com.admin.service.impl;
 
 import cn.dev33.satoken.stp.StpUtil;
+import com.admin.dto.SeckillActivityLaunchRequest;
 import com.admin.service.SuperService;
+import com.admin.service.client.PortalServiceClient;
 import com.admin.service.client.SystemServiceClient;
 import com.common.api.CommonResult;
 import com.admin.dto.SysUserDto;
@@ -12,6 +14,8 @@ import org.springframework.stereotype.Service;
 public class SuperServiceImpl implements SuperService {
     @Resource
     private SystemServiceClient systemServiceClient;
+    @Resource
+    private PortalServiceClient portalServiceClient;
 
     @Override
     public CommonResult<?> fetchSysUserInfo(int pageNum, int pageSize) {
@@ -46,5 +50,12 @@ public class SuperServiceImpl implements SuperService {
         StpUtil.checkLogin();
         StpUtil.checkPermission("super");
         return systemServiceClient.fetchSysUserByUserId(userId);
+    }
+
+    @Override
+    public CommonResult<?> launchSeckillActivity(SeckillActivityLaunchRequest request) {
+        StpUtil.checkLogin();
+        StpUtil.checkPermission("super");
+        return portalServiceClient.launchSeckillActivity(request);
     }
 }

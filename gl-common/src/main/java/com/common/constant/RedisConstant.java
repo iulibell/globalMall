@@ -35,4 +35,7 @@ public class RedisConstant {
     /** 浏览锁的重试时间*/
     public static final int COUNT_LOCK_WAIT_TIME = 5;
     public static final int COUNT_LOCK_LEASE_TIME = 10;
+
+    /** 秒杀报名行维度：用户在该活动商品下已累计下单件数（与 OMS 对齐，Lua 原子更新） */
+    public static final String SEC_KILL_USER_QTY_PREFIX = "sec:kill:user:qty:";
 }

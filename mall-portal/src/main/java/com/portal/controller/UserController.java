@@ -6,15 +6,20 @@ import com.portal.dto.CreateOrderFromCartRequest;
 import com.portal.dto.OmsOrderDto;
 import com.portal.dto.SysUserInfoDto;
 import com.portal.service.UserService;
+import com.portal.service.client.TmsServiceClient;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "UserController", description = "门户用户接口：下单、支付、取消订单与个人信息维护")
 @RestController
 @RequestMapping("/portal/user")
 public class UserController {
     @Resource
     private UserService userService;
+    @Resource
+    private TmsServiceClient tmsServiceClient;
 
     @PostMapping("/order/add")
     public CommonResult<?> addOrder(@Valid @RequestBody OmsOrderDto omsOrderDto){
@@ -61,5 +66,10 @@ public class UserController {
     public CommonResult<?> updateInfo(@RequestBody SysUserInfoDto sysUserInfoDto){
         userService.updateInfo(sysUserInfoDto);
         return CommonResult.success("修改成功!");
+    }
+
+    @PostMapping("/order/confirmReceived")
+    public CommonResult<?> confirmReceived(@RequestParam String transportOrderId){
+        return tmsServiceClient.consigneeSign(transportOrderId);
     }
 }

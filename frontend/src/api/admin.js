@@ -446,6 +446,25 @@ export async function deleteSuperUser(userId) {
   return { ok: res.ok, status: res.status, data }
 }
 
+/** super：发起秒杀活动主信息（mall-admin → mall-portal） */
+export async function launchSeckillActivity(payload) {
+  const res = await fetch(buildUrl('/admin/super/seckill/launch'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(payload || {}),
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
 export async function fetchSuperDictionaryList({ pageNum = 1, pageSize = 10 } = {}) {
   const res = await fetch(
     buildUrl('/admin/sys/super/getDictionary', { pageNum, pageSize }),

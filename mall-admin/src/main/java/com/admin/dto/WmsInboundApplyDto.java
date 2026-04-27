@@ -1,11 +1,13 @@
 package com.admin.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 import java.math.BigDecimal;
 
 @Data
+@Schema(description = "WmsInboundApplyDto")
 public class WmsInboundApplyDto {
     private String goodsId;
     @NotBlank(message = "申请入库id不能为空")

@@ -3,19 +3,28 @@ package com.portal.controller;
 import com.common.api.CommonResult;
 import com.portal.dto.PortalOffShelfPayDto;
 import com.portal.dto.PortalGoodsApplicationDto;
+import com.portal.dto.SeckillActivityCreateRequest;
 import com.portal.dto.SysUserInfoDto;
 import com.portal.service.MerchantService;
+import com.portal.service.SeckillActivityService;
+import com.portal.service.client.TmsServiceClient;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 
+@Tag(name = "MerchantController", description = "门户商家接口：上架申请、下架申请、费用支付与秒杀报名")
 @RestController
 @RequestMapping("/portal/merchant")
 public class MerchantController {
     @Resource
     private MerchantService merchantService;
+    @Resource
+    private SeckillActivityService seckillActivityService;
+    @Resource
+    private TmsServiceClient tmsServiceClient;
 
     @PostMapping("/payForInbound")
     public CommonResult<?> payForInbound(@RequestParam String applyId){
@@ -95,5 +104,21 @@ public class MerchantController {
     public CommonResult<?> getAvailableWarehouse(@RequestParam(defaultValue = "1")int pageNum,
                                                  @RequestParam(defaultValue = "10")int pageSize){
         return CommonResult.success(merchantService.getAvailableWarehouse(pageNum, pageSize));
+    }
+
+    @PostMapping("/seckill/apply")
+    public CommonResult<?> seckillApply(@Valid @RequestBody SeckillActivityCreateRequest request) {
+        return CommonResult.success(seckillActivityService.applyActivity(request));
+    }
+
+    @GetMapping("/seckill/myList")
+    public CommonResult<?> seckillMyList(@RequestParam(defaultValue = "1") int pageNum,
+                                         @RequestParam(defaultValue = "10") int pageSize) {
+        return CommonResult.success(seckillActivityService.listMyActivities(pageNum, pageSize));
+    }
+
+    @PostMapping("/order/confirmReceived")
+    public CommonResult<?> confirmReceived(@RequestParam String transportOrderId){
+        return tmsServiceClient.consigneeSign(transportOrderId);
     }
 }

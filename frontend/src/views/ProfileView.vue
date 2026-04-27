@@ -22,6 +22,7 @@ import {
   addSuperDictionary,
   updateSuperDictionary,
   deleteSuperDictionary,
+  launchSeckillActivity,
   fetchMerchantOwnGoodsApplications,
   fetchMerchantGoodsApplications,
   fetchReviewerRegisterApplications,
@@ -31,10 +32,11 @@ import {
 } from '@/api/admin'
 import {
   cancelUserOrder,
+  confirmMerchantOrderReceived,
+  confirmUserOrderReceived,
   createOrderFromCart,
   deleteUserCartItem,
   fetchMerchantSeckillActivities,
-  launchSeckillActivity,
   fetchMerchantPortalGoods,
   fetchMerchantOffShelfList,
   merchantApplySeckillActivity,
@@ -293,6 +295,7 @@ const userOrderList = ref([])
 const userOrderPageNum = ref(1)
 const userOrderPageSize = ref(10)
 const cancellingOrderId = ref('')
+const confirmingReceiveId = ref('')
 const managerGoodsLoading = ref(false)
 const managerGoodsError = ref('')
 const managerGoodsList = ref([])
@@ -936,6 +939,13 @@ function canCancelOrder(row) {
   return s === 2 || s === 3
 }
 
+function canConfirmReceiveOrder(row) {
+  const transportOrderId = String(row?.transportOrderId || '').trim()
+  if (!transportOrderId) return false
+  const s = Number(row?.status)
+  return s === 5
+}
+
 async function payOrderRow(row) {
   const orderId = String(row?.orderId || '').trim()
   if (!orderId) return
@@ -971,6 +981,49 @@ async function cancelOrderRow(row) {
   } finally {
     cancellingOrderId.value = ''
   }
+}
+
+async function confirmUserReceiveRow(row) {
+  const transportOrderId = String(row?.transportOrderId || '').trim()
+  if (!transportOrderId) return
+  confirmingReceiveId.value = transportOrderId
+  userOrderError.value = ''
+  userOrderTip.value = ''
+  try {
+    const { ok, data } = await confirmUserOrderReceived(transportOrderId)
+    if (!ok || data?.code !== 200 || data?.data === false) {
+      userOrderError.value = data?.message || txp('profile_user_order_receive_fail')
+      return
+    }
+    userOrderTip.value = data?.message || txp('profile_user_order_receive_ok')
+  } catch {
+    userOrderError.value = txp('profile_net_portal')
+  } finally {
+    confirmingReceiveId.value = ''
+  }
+}
+
+async function confirmMerchantReceiveRow(row) {
+  const transportOrderId = String(row?.transportOrderId || '').trim()
+  if (!transportOrderId) return
+  merchantApplyListError.value = ''
+  try {
+    const { ok, data } = await confirmMerchantOrderReceived(transportOrderId)
+    if (!ok || data?.code !== 200 || data?.data === false) {
+      merchantApplyListError.value = data?.message || txp('profile_merchant_order_receive_fail')
+      return
+    }
+  } catch {
+    merchantApplyListError.value = txp('profile_net_portal')
+  }
+}
+
+function canConfirmMerchantReceive(row) {
+  return canViewLogistic(row)
+}
+
+function canConfirmMerchantOffShelfReceive(row) {
+  return canViewOffShelfLogistic(row)
 }
 
 async function loadManagerGoodsList() {
@@ -2694,7 +2747,12 @@ watch(
                     <button v-else-if="canViewOffShelfLogistic(row)" class="op-btn info" @click="viewLogistic(row)">
                       {{ txp('profile_view_logistic') }}
                     </button>
-                    <span v-else class="reviewed-tag">{{ offShelfActionPlaceholder(row) }}</span>
+                    <button v-if="canConfirmMerchantOffShelfReceive(row)" class="op-btn pass" @click="confirmMerchantReceiveRow(row)">
+                      {{ txp('profile_confirm_receive') }}
+                    </button>
+                    <span v-if="!canPayOffShelf(row) && !canViewOffShelfLogistic(row) && !canConfirmMerchantOffShelfReceive(row)" class="reviewed-tag">
+                      {{ offShelfActionPlaceholder(row) }}
+                    </span>
                   </td>
                 </tr>
               </tbody>
@@ -2740,7 +2798,10 @@ watch(
                   <td class="op-cell">
                     <button v-if="canPayApply(row)" class="op-btn pass" @click="goPayApply(row)">{{ txp('profile_go_pay') }}</button>
                     <button v-else-if="canViewLogistic(row)" class="op-btn info" @click="viewLogistic(row)">{{ txp('profile_view_logistic') }}</button>
-                    <span v-else class="reviewed-tag">{{ txp('profile_empty_dash') }}</span>
+                    <button v-if="canConfirmMerchantReceive(row)" class="op-btn pass" @click="confirmMerchantReceiveRow(row)">{{ txp('profile_confirm_receive') }}</button>
+                    <span v-if="!canPayApply(row) && !canViewLogistic(row) && !canConfirmMerchantReceive(row)" class="reviewed-tag">
+                      {{ txp('profile_empty_dash') }}
+                    </span>
                   </td>
                 </tr>
               </tbody>
@@ -2893,6 +2954,14 @@ watch(
                       @click="payOrderRow(row)"
                     >
                       {{ txp('profile_go_pay') }}
+                    </button>
+                    <button
+                      v-if="canConfirmReceiveOrder(row)"
+                      class="op-btn pass"
+                      :disabled="confirmingReceiveId === String(row.transportOrderId || '').trim()"
+                      @click="confirmUserReceiveRow(row)"
+                    >
+                      {{ txp('profile_confirm_receive') }}
                     </button>
                     <button
                       v-if="canCancelOrder(row)"

@@ -1,6 +1,7 @@
 package com.portal.dto;
 
 import lombok.Data;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 import jakarta.validation.constraints.NotBlank;
 
@@ -8,6 +9,7 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 @Data
+@Schema(description = "门户订单参数")
 public class OmsOrderDto {
     @NotBlank(message = "oms_v_order_id")
     private String orderId;

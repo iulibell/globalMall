@@ -4,6 +4,7 @@ import com.admin.dto.PortalGoodsTypeDto;
 import com.admin.dto.PortalBrandDto;
 import com.admin.service.ManagerService;
 import com.common.api.CommonResult;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "ManagerController", description = "商城管理经理接口：商品、类型与品牌管理")
 @RestController
 @RequestMapping("/admin/manager")
 public class ManagerController {

@@ -27,4 +27,10 @@ public interface OmsServiceClient {
 
     @GetMapping("/oms/sys/getOrderPayDeadline")
     CommonResult<?> getOrderPayDeadline(@RequestParam String orderId);
+
+    @GetMapping("/oms/sys/sumUserSeckillGoodsQuantity")
+    CommonResult<Integer> sumUserSeckillGoodsQuantity(@RequestParam("userId") String userId,
+                                                      @RequestParam("goodsId") String goodsId,
+                                                      @RequestParam("startMs") long startMs,
+                                                      @RequestParam("endMs") long endMs);
 }

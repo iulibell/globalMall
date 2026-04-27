@@ -406,6 +406,10 @@ export const BY_TYPE = {
     profile_user_order_pay_fail: { '1': '支付失败', '2': 'Payment failed', '3': 'Ошибка оплаты' },
     profile_user_order_cancel_ok: { '1': '取消成功', '2': 'Cancelled', '3': 'Отменено' },
     profile_user_order_cancel_fail: { '1': '取消失败', '2': 'Cancel failed', '3': 'Ошибка отмены' },
+    profile_confirm_receive: { '1': '签收', '2': 'Confirm receipt', '3': 'Подтвердить получение' },
+    profile_user_order_receive_ok: { '1': '签收成功', '2': 'Receipt confirmed', '3': 'Получение подтверждено' },
+    profile_user_order_receive_fail: { '1': '签收失败', '2': 'Failed to confirm receipt', '3': 'Не удалось подтвердить получение' },
+    profile_merchant_order_receive_fail: { '1': '签收失败', '2': 'Failed to confirm receipt', '3': 'Не удалось подтвердить получение' },
     profile_user_order_need_contact: {
       '1': '请先完善手机号和城市后再结算',
       '2': 'Please set phone and city before checkout',

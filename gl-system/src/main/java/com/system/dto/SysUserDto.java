@@ -1,9 +1,11 @@
 package com.system.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
+@Schema(description = "SysUserDto")
 public class SysUserDto {
     @NotBlank(message = "用户ID不能为空")
     private Long userId;

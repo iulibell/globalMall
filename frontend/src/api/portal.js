@@ -442,6 +442,42 @@ export async function cancelUserOrder(orderId) {
   return { ok: res.ok, status: res.status, data }
 }
 
+/** 用户确认签收（记录到物流系统） */
+export async function confirmUserOrderReceived(transportOrderId) {
+  const res = await fetch(buildUrl('/portal/user/order/confirmReceived', { transportOrderId }), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
+/** 商家确认签收（记录到物流系统） */
+export async function confirmMerchantOrderReceived(transportOrderId) {
+  const res = await fetch(buildUrl('/portal/merchant/order/confirmReceived', { transportOrderId }), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...buildAuthHeader(),
+    },
+  })
+  let data = {}
+  try {
+    data = await res.json()
+  } catch {
+    /* ignore */
+  }
+  return { ok: res.ok, status: res.status, data }
+}
+
 /** 从购物车创建订单（需 user 登录态） */
 export async function createOrderFromCart(payload) {
   const res = await fetch(buildUrl('/portal/user/order/createFromCart'), {
@@ -480,9 +516,9 @@ export async function createOrderDirect(payload) {
   return { ok: res.ok, status: res.status, data }
 }
 
-/** 超管/经理：秒杀活动列表 */
-export async function fetchSeckillActivitiesForManager({ pageNum = 1, pageSize = 10, status } = {}) {
-  const res = await fetch(buildUrl('/portal/manager/seckill/list', { pageNum, pageSize, status }), {
+/** 审核员：秒杀报名列表 */
+export async function fetchReviewerSeckillList({ pageNum = 1, pageSize = 10, status } = {}) {
+  const res = await fetch(buildUrl('/portal/reviewer/seckill/list', { pageNum, pageSize, status }), {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -498,28 +534,9 @@ export async function fetchSeckillActivitiesForManager({ pageNum = 1, pageSize =
   return { ok: res.ok, status: res.status, data }
 }
 
-/** super：发起秒杀活动主信息 */
-export async function launchSeckillActivity(payload) {
-  const res = await fetch(buildUrl('/portal/manager/seckill/launch'), {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...buildAuthHeader(),
-    },
-    body: JSON.stringify(payload || {}),
-  })
-  let data = {}
-  try {
-    data = await res.json()
-  } catch {
-    /* ignore */
-  }
-  return { ok: res.ok, status: res.status, data }
-}
-
-/** 审核员：审核秒杀活动 */
+/** 审核员：审核秒杀报名 */
 export async function reviewSeckillActivity(payload) {
-  const res = await fetch(buildUrl('/portal/manager/seckill/review'), {
+  const res = await fetch(buildUrl('/portal/reviewer/seckill/review'), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -536,9 +553,9 @@ export async function reviewSeckillActivity(payload) {
   return { ok: res.ok, status: res.status, data }
 }
 
-/** 审核员：取消秒杀活动 */
+/** 审核员：取消秒杀报名 */
 export async function cancelSeckillActivity(activityCode, reviewRemark = '') {
-  const res = await fetch(buildUrl('/portal/manager/seckill/cancel', { activityCode, reviewRemark }), {
+  const res = await fetch(buildUrl('/portal/reviewer/seckill/cancel', { activityCode, reviewRemark }), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

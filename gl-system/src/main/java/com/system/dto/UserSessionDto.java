@@ -1,5 +1,6 @@
 package com.system.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -10,6 +11,7 @@ import lombok.Data;
  * Sa-Token {@code adminInfo} 会话快照；{@code userId} 使用字符串避免前端 JSON 数字精度问题。
  */
 @Data
+@Schema(description = "UserSessionDto")
 public class UserSessionDto {
 
     private static final String K_USER_ID = "userId";

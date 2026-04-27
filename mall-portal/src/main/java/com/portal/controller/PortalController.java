@@ -6,12 +6,14 @@ import com.portal.dto.PortalGoodsNeededDto;
 import com.portal.dto.PortalOffShelfSysDto;
 import com.portal.service.MerchantService;
 import com.portal.service.PortalService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
 
+@Tag(name = "PortalController", description = "门户通用接口：商品查询、系统回调与下架流程协同")
 @RestController
 @RequestMapping("/portal")
 public class PortalController {

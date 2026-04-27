@@ -3,6 +3,7 @@ package com.portal.controller;
 import com.common.api.CommonResult;
 import com.portal.dto.PortalGoodsTypeDto;
 import com.portal.service.PortalGoodsTypeService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
+@Tag(name = "PortalGoodsTypeController", description = "门户商品类型接口：类型查询与管理维护")
 @RestController
 @RequestMapping("/portal")
 public class PortalGoodsTypeController {

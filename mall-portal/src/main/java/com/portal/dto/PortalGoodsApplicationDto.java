@@ -2,11 +2,13 @@ package com.portal.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.math.BigDecimal;
 
 @Data
+@Schema(description = "商品上架申请参数")
 public class PortalGoodsApplicationDto {
     @NotBlank(message = "商家id不能为空")
     private String userId;

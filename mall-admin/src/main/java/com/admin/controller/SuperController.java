@@ -1,12 +1,16 @@
 package com.admin.controller;
 
+import com.admin.dto.SeckillActivityLaunchRequest;
 import com.admin.dto.SysUserDto;
 import com.admin.service.SuperService;
 import com.common.api.CommonResult;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.annotation.Resource;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "SuperController", description = "商城管理超管接口：用户全局管理与秒杀活动发起")
 @RestController
 @RequestMapping("/admin/super")
 public class SuperController {
@@ -44,5 +48,11 @@ public class SuperController {
     @Operation(summary = "删除用户", description = "超管权限；按 userId 删除系统用户。")
     public CommonResult<?> deleteSysUser(@RequestParam String userId) {
         return superService.deleteSysUserInfo(userId);
+    }
+
+    @PostMapping("/seckill/launch")
+    @Operation(summary = "发起秒杀活动", description = "超管权限；经 mall-portal 写入活动主信息。")
+    public CommonResult<?> launchSeckillActivity(@Valid @RequestBody SeckillActivityLaunchRequest request) {
+        return superService.launchSeckillActivity(request);
     }
 }

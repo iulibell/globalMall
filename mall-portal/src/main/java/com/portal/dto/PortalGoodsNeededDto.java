@@ -1,9 +1,11 @@
 package com.portal.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
+@Schema(description = "PortalGoodsNeededDto")
 public class PortalGoodsNeededDto {
     @NotBlank(message = "商品id不能为空")
     private String goodsId;

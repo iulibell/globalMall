@@ -3,6 +3,7 @@ package com.admin.service.client;
 import com.admin.dto.PortalGoodsDto;
 import com.admin.dto.PortalBrandDto;
 import com.admin.dto.PortalGoodsTypeDto;
+import com.admin.dto.SeckillActivityLaunchRequest;
 import com.common.api.CommonResult;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,4 +48,7 @@ public interface PortalServiceClient {
 
     @PostMapping("/portal/manager/deleteBrand")
     void deleteBrand(@RequestParam Long id);
+
+    @PostMapping("/portal/super/seckill/launch")
+    CommonResult<?> launchSeckillActivity(@RequestBody SeckillActivityLaunchRequest request);
 }

@@ -1,14 +1,14 @@
-package com.portal.dto;
+package com.admin.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.util.Date;
 
 @Data
-@Schema(description = "SeckillActivityLaunchRequest")
+@Schema(description = "平台发起秒杀活动请求")
 public class SeckillActivityLaunchRequest {
     @NotBlank(message = "活动名称不能为空")
     private String activityName;

@@ -1,5 +1,6 @@
 package com.admin.dto;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -7,6 +8,7 @@ import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
+@Schema(description = "PortalGoodsApplicationDto")
 public class PortalGoodsApplicationDto {
     private Long id;
     @NotBlank(message = "上架申请id不能为空")

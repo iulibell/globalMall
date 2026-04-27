@@ -462,4 +462,16 @@ INSERT INTO `dictionary` (`dict_type`, `dict_name`, `dict_value`, `sort`, `statu
 ('page_mall_profile','—','profile_empty_dash',152,1,'3'),
 ('page_mall_profile','GLOBALMALL CENTER','profile_globalmall_center',153,1,'1'),
 ('page_mall_profile','GLOBALMALL CENTER','profile_globalmall_center',153,1,'2'),
-('page_mall_profile','GLOBALMALL CENTER','profile_globalmall_center',153,1,'3');
+('page_mall_profile','GLOBALMALL CENTER','profile_globalmall_center',153,1,'3'),
+('page_mall_profile','签收','profile_confirm_receive',154,1,'1'),
+('page_mall_profile','Confirm receipt','profile_confirm_receive',154,1,'2'),
+('page_mall_profile','Подтвердить получение','profile_confirm_receive',154,1,'3'),
+('page_mall_profile','签收成功','profile_user_order_receive_ok',155,1,'1'),
+('page_mall_profile','Receipt confirmed','profile_user_order_receive_ok',155,1,'2'),
+('page_mall_profile','Получение подтверждено','profile_user_order_receive_ok',155,1,'3'),
+('page_mall_profile','签收失败','profile_user_order_receive_fail',156,1,'1'),
+('page_mall_profile','Failed to confirm receipt','profile_user_order_receive_fail',156,1,'2'),
+('page_mall_profile','Не удалось подтвердить получение','profile_user_order_receive_fail',156,1,'3'),
+('page_mall_profile','签收失败','profile_merchant_order_receive_fail',157,1,'1'),
+('page_mall_profile','Failed to confirm receipt','profile_merchant_order_receive_fail',157,1,'2'),
+('page_mall_profile','Не удалось подтвердить получение','profile_merchant_order_receive_fail',157,1,'3');

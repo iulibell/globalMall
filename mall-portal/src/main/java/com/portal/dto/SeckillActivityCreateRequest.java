@@ -4,12 +4,14 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.Date;
 
 @Data
+@Schema(description = "商家秒杀报名请求")
 public class SeckillActivityCreateRequest {
     @NotBlank(message = "商品id不能为空")
     private String goodsId;
